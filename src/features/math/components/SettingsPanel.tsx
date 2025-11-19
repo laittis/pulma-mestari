@@ -9,21 +9,18 @@ type Props = {
   level: number;
   roundLength: number;
   mode: 'mixed' | 'add' | 'sub' | 'mul';
-  autoAdvance: boolean;
   onClose: () => void;
-  onApply: (opts: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul'; autoAdvance: boolean }) => void;
+  onApply: (opts: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => void;
 };
 
-export function SettingsPanel({ open, level, roundLength, mode, autoAdvance, onClose, onApply }: Props) {
+export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply }: Props) {
   const DEFAULT_LEVEL = 1;
   const DEFAULT_ROUND_LENGTH = 10;
   const DEFAULT_MODE: 'mixed' | 'add' | 'sub' | 'mul' = 'mixed';
-  const DEFAULT_AUTO = true;
 
   const [localLevel, setLocalLevel] = useState(level);
   const [localLen, setLocalLen] = useState(roundLength);
   const [localMode, setLocalMode] = useState<typeof mode>(mode);
-  const [localAuto, setLocalAuto] = useState(autoAdvance);
 
   if (!open) return null;
 
@@ -38,7 +35,6 @@ export function SettingsPanel({ open, level, roundLength, mode, autoAdvance, onC
               setLocalLevel(DEFAULT_LEVEL);
               setLocalLen(DEFAULT_ROUND_LENGTH);
               setLocalMode(DEFAULT_MODE);
-              setLocalAuto(DEFAULT_AUTO);
             }}
             className="px-3 py-1 text-sm rounded-full border border-gray-300 bg-white text-gray-700"
           >
@@ -54,20 +50,16 @@ export function SettingsPanel({ open, level, roundLength, mode, autoAdvance, onC
         </div>
       </div>
 
-      <p className="-mt-2 mb-3 text-xs text-gray-500">
-        Valitse taso ja tehtävien määrä. Pikavalinnat muuttavat valintaa; aloita uusi kierros painamalla &quot;Käytä&quot;.
-      </p>
+      <div className="-mt-2 mb-3 space-y-1 text-xs text-gray-500">
+        <p>
+          Valitse taso ja tehtävien määrä. Pikavalinnat muuttavat valintaa; aloita uusi kierros painamalla &quot;Käytä&quot;.
+        </p>
+        <p className="text-gray-500">
+          Automaattinen eteneminen säädetään kierroksen aikana ohjaimesta, eikä ole enää yleisasetus.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 gap-3">
-        <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-gray-700">Automaattinen eteneminen</span>
-          <input
-            type="checkbox"
-            checked={localAuto}
-            onChange={(e) => setLocalAuto(e.target.checked)}
-          />
-        </label>
-
         <label className="flex items-center justify-between gap-4">
           <span className="text-sm text-gray-700">Pelitila</span>
           <select
@@ -111,16 +103,15 @@ export function SettingsPanel({ open, level, roundLength, mode, autoAdvance, onC
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={() => onApply({ level: localLevel, roundLength: localLen, mode: localMode, autoAdvance: localAuto })}
+            onClick={() => onApply({ level: localLevel, roundLength: localLen, mode: localMode })}
             disabled={
               localLevel === level &&
               localLen === roundLength &&
-              localMode === mode &&
-              localAuto === autoAdvance
+              localMode === mode
             }
             className={
               "px-3 py-2 text-sm rounded-full border-0 text-white " +
-              (localLevel === level && localLen === roundLength && localMode === mode && localAuto === autoAdvance
+              (localLevel === level && localLen === roundLength && localMode === mode
                 ? "bg-blue-300 cursor-not-allowed"
                 : "bg-blue-600")
             }
