@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const levelParam = searchParams.get('level') ?? searchParams.get('grade') ?? '1';
+  const levelParam = searchParams.get('level') ?? '1';
   const level = Number(levelParam);
   const numParam = searchParams.get('num') ?? '10';
   const num = Number(numParam);

@@ -9,8 +9,6 @@ type Props = {
   onSubmit: () => void;
   onNext: () => void;
   onRestart: () => void;
-  autoAdvance: boolean;
-  onToggleAutoAdvance: (value: boolean) => void;
   submitType?: 'button' | 'submit';
 };
 
@@ -20,8 +18,6 @@ export function Controls({
   onSubmit,
   onNext,
   onRestart,
-  autoAdvance,
-  onToggleAutoAdvance,
   submitType = 'button',
 }: Props) {
   return (
@@ -57,18 +53,6 @@ export function Controls({
           Aloita alusta
         </button>
       </div>
-
-      <label className="flex items-center gap-2 text-sm text-gray-700">
-        <input
-          type="checkbox"
-          checked={autoAdvance}
-          onChange={(e) => onToggleAutoAdvance(e.target.checked)}
-        />
-        <div className="leading-tight">
-          <div>Automaattinen eteneminen (tämä kierros)</div>
-          <div className="text-[11px] text-gray-500">Oletusarvo löytyy Asetuksista käyttäjäasetuksista</div>
-        </div>
-      </label>
     </div>
   );
 }

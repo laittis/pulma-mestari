@@ -1,7 +1,7 @@
 // src/features/math/components/GameClient.tsx
 'use client';
 
-import { useEffect, useReducer, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useReducer, useRef, type MouseEvent } from 'react';
 import Link from 'next/link';
 import type { GeneratedRound } from '@/features/math/tasks/types';
 import { TaskRenderer } from '@/features/math/components/TaskRenderer';
@@ -29,12 +29,6 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     initGameState(initialLevel, initialRound, initialMode)
   );
 
-  const [userSettings, setUserSettings] = useState({
-    preferredLevel: initialLevel,
-    preferredMode: initialMode,
-    defaultAutoAdvance: true,
-  });
-
   const currentTask = selectCurrentTask(state);
   const { totalTasks, questionNumber } = selectTotals(state);
   const isCorrect = state.lastCorrect === true;
@@ -61,19 +55,15 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     level,
     roundLength,
     mode,
-    autoAdvanceDefault,
   }: {
     level: number;
     roundLength: number;
     mode: 'mixed' | 'add' | 'sub' | 'mul';
-    autoAdvanceDefault?: boolean;
   }) => {
     dispatch({ type: 'APPLY_SETTINGS', level, roundLength });
     if (mode !== state.mode) {
       dispatch({ type: 'SET_MODE', mode });
     }
-    const autoAdvanceValue = autoAdvanceDefault ?? userSettings.defaultAutoAdvance;
-    dispatch({ type: 'SET_AUTO_ADVANCE', value: autoAdvanceValue });
     dispatch({ type: 'CLOSE_SETTINGS' });
     dispatch({ type: 'NEW_ROUND_REQUEST' });
     try {
@@ -85,7 +75,6 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
   };
 
   const handleNewRound = async () => {
-    dispatch({ type: 'SET_AUTO_ADVANCE', value: userSettings.defaultAutoAdvance });
     dispatch({ type: 'NEW_ROUND_REQUEST' });
     try {
       const round = await fetchRound(state.level, state.roundLength, state.mode);
@@ -98,7 +87,6 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
 
   const handleToggleSettings = () => dispatch({ type: state.settingsOpen ? 'CLOSE_SETTINGS' : 'OPEN_SETTINGS' });
   const handleCloseSettings = () => dispatch({ type: 'CLOSE_SETTINGS' });
-  const handleAutoAdvanceChange = (value: boolean) => dispatch({ type: 'SET_AUTO_ADVANCE', value });
   const handleBackToMenu = (event: MouseEvent<HTMLAnchorElement>) => {
     const hasActiveRound = state.phase === 'question' || state.phase === 'feedback';
     if (hasActiveRound && !window.confirm('Poistutaanko kierrokselta? Edistymistä ei tallenneta.')) {
@@ -107,45 +95,33 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     }
   };
   const handleApplySettings = async ({
-    userSettings: newUserSettings,
     roundOptions,
   }: {
-    userSettings: { preferredLevel: number; preferredMode: 'mixed' | 'add' | 'sub' | 'mul'; defaultAutoAdvance: boolean };
     roundOptions: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' };
   }) => {
-    setUserSettings(newUserSettings);
-    if (state.autoAdvance !== newUserSettings.defaultAutoAdvance) {
-      dispatch({ type: 'SET_AUTO_ADVANCE', value: newUserSettings.defaultAutoAdvance });
-    }
-
-    const userSettingsChanged =
-      newUserSettings.preferredLevel !== userSettings.preferredLevel ||
-      newUserSettings.preferredMode !== userSettings.preferredMode ||
-      newUserSettings.defaultAutoAdvance !== userSettings.defaultAutoAdvance;
-
     const roundModeChanged = roundOptions.mode !== state.mode;
     const roundChanged =
       roundOptions.level !== state.level || roundOptions.roundLength !== state.roundLength || roundModeChanged;
 
-    const nextRoundOptions = roundChanged
-      ? roundOptions
-      : { ...roundOptions, level: newUserSettings.preferredLevel, mode: newUserSettings.preferredMode };
-
-    if (roundChanged || userSettingsChanged) {
-      await applyRoundOptions({ ...nextRoundOptions, autoAdvanceDefault: newUserSettings.defaultAutoAdvance });
+    if (roundChanged) {
+      await applyRoundOptions(roundOptions);
     } else {
       dispatch({ type: 'CLOSE_SETTINGS' });
     }
   };
 
-  // Persist user settings
+  // Close settings with Escape for quick UX
   useEffect(() => {
-    try {
-      localStorage.setItem('pm.user.preferredLevel', String(userSettings.preferredLevel));
-      localStorage.setItem('pm.user.preferredMode', userSettings.preferredMode);
-      localStorage.setItem('pm.user.defaultAutoAdvance', String(userSettings.defaultAutoAdvance));
-    } catch {}
-  }, [userSettings]);
+    if (!state.settingsOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        dispatch({ type: 'CLOSE_SETTINGS' });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [state.settingsOpen]);
 
   // Persist round options separately
   useEffect(() => {
@@ -153,9 +129,8 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
       localStorage.setItem('pm.round.level', String(state.level));
       localStorage.setItem('pm.round.length', String(state.roundLength));
       localStorage.setItem('pm.round.mode', state.mode);
-      localStorage.setItem('pm.round.autoAdvance', String(state.autoAdvance));
     } catch {}
-  }, [state.level, state.roundLength, state.mode, state.autoAdvance]);
+  }, [state.level, state.roundLength, state.mode]);
 
   // Hydrate settings from localStorage once on mount
   const hydratedRef = useRef(false);
@@ -164,16 +139,12 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     hydratedRef.current = true;
     (async () => {
       try {
-        const preferredLevelRaw = localStorage.getItem('pm.user.preferredLevel') ?? localStorage.getItem('pm.level');
-        const preferredModeRaw = localStorage.getItem('pm.user.preferredMode') ?? localStorage.getItem('pm.mode');
-        const preferredAutoAdvanceRaw = localStorage.getItem('pm.user.defaultAutoAdvance') ?? localStorage.getItem('pm.autoAdvance');
+        const preferredLevelRaw = localStorage.getItem('pm.level');
+        const preferredModeRaw = localStorage.getItem('pm.mode');
         const lastOutcomeRaw = localStorage.getItem('pm.lastOutcome');
 
         const parsedPreferredLevel = preferredLevelRaw ? Number(preferredLevelRaw) : NaN;
         const parsedPreferredMode = preferredModeRaw as 'mixed' | 'add' | 'sub' | 'mul' | null;
-        const parsedPreferredAutoAdvance = preferredAutoAdvanceRaw === 'true' || preferredAutoAdvanceRaw === 'false'
-          ? preferredAutoAdvanceRaw === 'true'
-          : null;
 
         const preferredLevel = Number.isFinite(parsedPreferredLevel) && parsedPreferredLevel >= 1 && parsedPreferredLevel <= 99
           ? parsedPreferredLevel
@@ -181,21 +152,14 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
         const preferredMode = parsedPreferredMode && ['mixed', 'add', 'sub', 'mul'].includes(parsedPreferredMode)
           ? parsedPreferredMode
           : state.mode;
-        const defaultAutoAdvance = parsedPreferredAutoAdvance ?? state.autoAdvance;
-
-        setUserSettings({ preferredLevel, preferredMode, defaultAutoAdvance });
 
         const roundLevelRaw = localStorage.getItem('pm.round.level') ?? localStorage.getItem('pm.level');
         const roundLengthRaw = localStorage.getItem('pm.round.length') ?? localStorage.getItem('pm.roundLength');
         const roundModeRaw = localStorage.getItem('pm.round.mode') ?? localStorage.getItem('pm.mode');
-        const roundAutoAdvanceRaw = localStorage.getItem('pm.round.autoAdvance') ?? preferredAutoAdvanceRaw;
 
         const parsedRoundLevel = roundLevelRaw ? Number(roundLevelRaw) : NaN;
         const parsedRoundLength = roundLengthRaw ? Number(roundLengthRaw) : NaN;
         const parsedRoundMode = roundModeRaw as 'mixed' | 'add' | 'sub' | 'mul' | null;
-        const parsedRoundAutoAdvance = roundAutoAdvanceRaw === 'true' || roundAutoAdvanceRaw === 'false'
-          ? roundAutoAdvanceRaw === 'true'
-          : defaultAutoAdvance;
 
         const validRoundLevel = Number.isFinite(parsedRoundLevel) && parsedRoundLevel >= 1 && parsedRoundLevel <= 99
           ? parsedRoundLevel
@@ -210,16 +174,11 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
         const shouldUpdateRoundSettings =
           validRoundLevel !== state.level || validRoundLength !== state.roundLength || validRoundMode !== state.mode;
 
-        if (parsedRoundAutoAdvance !== state.autoAdvance) {
-          dispatch({ type: 'SET_AUTO_ADVANCE', value: parsedRoundAutoAdvance });
-        }
-
         if (shouldUpdateRoundSettings) {
           await applyRoundOptions({
             level: validRoundLevel,
             roundLength: validRoundLength,
             mode: validRoundMode,
-            autoAdvanceDefault: parsedRoundAutoAdvance,
           });
         }
 
@@ -272,14 +231,7 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
   }, [state.phase]);
 
   // Auto-advance after brief delay on feedback (dopamine feedback)
-  useEffect(() => {
-    if (state.phase !== 'feedback' || !state.autoAdvance) return;
-    const delay = state.lastCorrect ? 800 : 1400; // shorter when correct
-    const t = setTimeout(() => {
-      handleNext();
-    }, delay);
-    return () => clearTimeout(t);
-  }, [state.phase, state.lastCorrect, state.autoAdvance]);
+  // (Removed) auto-advance feature
 
   if (state.phase === 'loading') {
     return (
@@ -363,8 +315,6 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
                   onSubmit={handleSubmit}
                   onNext={handleNext}
                   onRestart={handleNewRound}
-                  autoAdvance={state.autoAdvance}
-                  onToggleAutoAdvance={handleAutoAdvanceChange}
                   submitType="submit"
                 />
               </form>
@@ -390,8 +340,6 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
                   onSubmit={handleSubmit}
                   onNext={handleNext}
                   onRestart={handleNewRound}
-                  autoAdvance={state.autoAdvance}
-                  onToggleAutoAdvance={handleAutoAdvanceChange}
                 />
               </>
             )}
@@ -403,10 +351,9 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
         )}
 
         <SettingsPanel
-          key={`${String(!!state.settingsOpen)}-${state.level}-${state.roundLength}-${state.mode}-${userSettings.defaultAutoAdvance}-${userSettings.preferredLevel}-${userSettings.preferredMode}`}
+          key={`${String(!!state.settingsOpen)}-${state.level}-${state.roundLength}-${state.mode}`}
           open={!!state.settingsOpen}
           roundOptions={{ level: state.level, roundLength: state.roundLength, mode: state.mode }}
-          userSettings={userSettings}
           onClose={handleCloseSettings}
           onApply={handleApplySettings}
         />
