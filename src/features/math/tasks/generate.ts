@@ -10,8 +10,11 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Operation now derived from level profile
-function pickOp(level: number): Operation {
+// Operation now derived from level profile or mode override
+function pickOp(level: number, mode?: 'mixed' | 'add' | 'sub' | 'mul'): Operation {
+  if (mode === 'add') return 'add';
+  if (mode === 'sub') return 'sub';
+  if (mode === 'mul') return 'mul';
   return pickOpFromProfile(level);
 }
 
@@ -22,7 +25,7 @@ function pickTarget(level: number): AnswerTarget {
   return pickTargetFromWeights(prof.targetWeights);
 }
 
-function maybeGenerateExpression(level: number): Task | null {
+function maybeGenerateExpression(level: number, mode?: 'mixed' | 'add' | 'sub' | 'mul'): Task | null {
   const prof = getProfile(level);
   const patterns = prof.patterns ?? [];
   if (patterns.length === 0) return null;
@@ -44,7 +47,9 @@ function maybeGenerateExpression(level: number): Task | null {
     }
     const ops: ('+' | '-')[] = [];
     for (let i = 0; i < terms - 1; i++) {
-      if (pat.kind === 'sum') ops.push('+');
+      if (mode === 'add') ops.push('+');
+      else if (mode === 'sub') ops.push('-');
+      else if (pat.kind === 'sum') ops.push('+');
       else if (pat.kind === 'sumdiff' || pat.kind === 'mixed') ops.push(Math.random() < 0.7 ? '+' : '-');
       else ops.push('+');
     }
@@ -117,10 +122,10 @@ function maybeGenerateExpression(level: number): Task | null {
   };
 }
 
-function generateSingleTask(level: number): Task {
-  const maybeExpr = maybeGenerateExpression(level);
+function generateSingleTask(level: number, mode?: 'mixed' | 'add' | 'sub' | 'mul'): Task {
+  const maybeExpr = mode === 'mul' ? null : maybeGenerateExpression(level, mode);
   if (maybeExpr) return maybeExpr;
-  const op = pickOp(level);
+  const op = pickOp(level, mode);
   let a = 0;
   let b = 0;
 
@@ -163,12 +168,12 @@ function generateSingleTask(level: number): Task {
   } as Task;
 }
 
-export function generateRound(level: number, numTasks: number = 10): GeneratedRound {
+export function generateRound(level: number, numTasks: number = 10, options?: { mode?: 'mixed' | 'add' | 'sub' | 'mul' }): GeneratedRound {
   const roundId = randomUUID();
   const tasks: Task[] = [];
 
   for (let i = 0; i < numTasks; i++) {
-    tasks.push(generateSingleTask(level));
+    tasks.push(generateSingleTask(level, options?.mode));
   }
 
   return { roundId, tasks };

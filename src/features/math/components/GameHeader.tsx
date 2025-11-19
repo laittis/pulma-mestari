@@ -21,7 +21,7 @@ export function GameHeader({
 }: Props) {
   return (
     <header className="mb-4">
-      <h1 className="text-[24px] m-0">PikkuMatikka</h1>
+      <h1 className="text-[24px] m-0">Pulmamestarit</h1>
       <p className="mt-1 text-sm text-gray-600">
         Taso {level} · {phase === "summary" ? "Kierros valmis" : `Tehtävä ${questionNumber} / ${totalTasks}`}
       </p>

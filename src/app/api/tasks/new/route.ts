@@ -10,13 +10,15 @@ export async function GET(request: Request) {
   const level = Number(levelParam);
   const numParam = searchParams.get('num') ?? '10';
   const num = Number(numParam);
+  const modeParam = (searchParams.get('mode') ?? 'mixed').toLowerCase();
+  const mode = modeParam === 'add' || modeParam === 'sub' || modeParam === 'mul' ? modeParam : 'mixed';
 
-  if (!Number.isFinite(level) || level < 1 || level > 6) {
+  if (!Number.isFinite(level) || level < 1 || level > 99) {
     return NextResponse.json({ error: 'Invalid level parameter' }, { status: 400 });
   }
 
   const count = Number.isFinite(num) && num >= 1 && num <= 50 ? Math.floor(num) : 10;
-  const round = generateRound(level, count);
+  const round = generateRound(level, count, { mode });
 
   return NextResponse.json(round);
 }

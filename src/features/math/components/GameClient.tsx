@@ -13,16 +13,18 @@ import { FeedbackText } from '@/features/math/components/FeedbackText';
 import { SummaryPanel } from '@/features/math/components/SummaryPanel';
 import { Controls } from '@/features/math/components/Controls';
 import { SettingsPanel } from '@/features/math/components/SettingsPanel';
+import { fetchRound } from '@/features/math/api/rounds';
 
 type Props = {
   initialLevel: number;
   initialRound: GeneratedRound;
+  initialMode?: 'mixed' | 'add' | 'sub' | 'mul';
 };
 
-export default function GameClient({ initialLevel, initialRound }: Props) {
+export default function GameClient({ initialLevel, initialRound, initialMode = 'mixed' }: Props) {
   const [state, dispatch] = useReducer(
     gameReducer,
-    initGameState(initialLevel, initialRound)
+    initGameState(initialLevel, initialRound, initialMode)
   );
 
   const currentTask = selectCurrentTask(state);
@@ -39,9 +41,7 @@ export default function GameClient({ initialLevel, initialRound }: Props) {
   const handleNewRound = async () => {
     dispatch({ type: 'NEW_ROUND_REQUEST' });
     try {
-      const res = await fetch(`/api/tasks/new?level=${state.level}&num=${state.roundLength}`);
-      if (!res.ok) throw new Error('Failed to fetch round');
-      const round = (await res.json()) as GeneratedRound;
+      const round = await fetchRound(state.level, state.roundLength, state.mode);
       dispatch({ type: 'NEW_ROUND_SUCCESS', round });
     } catch (err: unknown) {
       dispatch({ type: 'NEW_ROUND_FAILURE', error: (err as Error).message });
@@ -50,15 +50,16 @@ export default function GameClient({ initialLevel, initialRound }: Props) {
 
   const handleOpenSettings = () => dispatch({ type: 'OPEN_SETTINGS' });
   const handleCloseSettings = () => dispatch({ type: 'CLOSE_SETTINGS' });
-  const handleApplySettings = async ({ level, roundLength }: { level: number; roundLength: number }) => {
+  const handleApplySettings = async ({ level, roundLength, mode }: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => {
     dispatch({ type: 'APPLY_SETTINGS', level, roundLength });
+    if (mode !== state.mode) {
+      dispatch({ type: 'SET_MODE', mode });
+    }
     dispatch({ type: 'CLOSE_SETTINGS' });
     // Fetch round using new settings directly to avoid stale state reads.
     dispatch({ type: 'NEW_ROUND_REQUEST' });
     try {
-      const res = await fetch(`/api/tasks/new?level=${level}&num=${roundLength}`);
-      if (!res.ok) throw new Error('Failed to fetch round');
-      const round = (await res.json()) as GeneratedRound;
+      const round = await fetchRound(level, roundLength, mode);
       dispatch({ type: 'NEW_ROUND_SUCCESS', round });
     } catch (err: unknown) {
       dispatch({ type: 'NEW_ROUND_FAILURE', error: (err as Error).message });
@@ -70,38 +71,54 @@ export default function GameClient({ initialLevel, initialRound }: Props) {
     try {
       localStorage.setItem('pm.level', String(state.level));
       localStorage.setItem('pm.roundLength', String(state.roundLength));
+      localStorage.setItem('pm.mode', state.mode);
     } catch {}
-  }, [state.level, state.roundLength]);
+  }, [state.level, state.roundLength, state.mode]);
 
   // Hydrate settings from localStorage once on mount
   const hydratedRef = useRef(false);
   useEffect(() => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
-    try {
-      const l = localStorage.getItem('pm.level');
-      const len = localStorage.getItem('pm.roundLength');
-      const lo = localStorage.getItem('pm.lastOutcome');
-      const level = l ? Number(l) : NaN;
-      const roundLength = len ? Number(len) : NaN;
-      const validLevel = Number.isFinite(level) && level >= 1 && level <= 6 ? level : state.level;
-      const validLen = Number.isFinite(roundLength) && roundLength >= 5 && roundLength <= 30 ? roundLength : state.roundLength;
-      if (validLevel !== state.level || validLen !== state.roundLength) {
-        void handleApplySettings({ level: validLevel, roundLength: validLen });
-      }
-      if (lo) {
-        try {
-          const parsed = JSON.parse(lo) as { correct: number; total: number };
-          if (
-            parsed &&
-            typeof parsed.correct === 'number' &&
-            typeof parsed.total === 'number'
-          ) {
-            dispatch({ type: 'SET_LAST_OUTCOME', outcome: parsed });
+    (async () => {
+      try {
+        const l = localStorage.getItem('pm.level');
+        const len = localStorage.getItem('pm.roundLength');
+        const lo = localStorage.getItem('pm.lastOutcome');
+        const m = localStorage.getItem('pm.mode');
+        const level = l ? Number(l) : NaN;
+        const roundLength = len ? Number(len) : NaN;
+        const validLevel = Number.isFinite(level) && level >= 1 && level <= 99 ? level : state.level;
+        const validLen = Number.isFinite(roundLength) && roundLength >= 5 && roundLength <= 30 ? roundLength : state.roundLength;
+        const validMode = m === 'add' || m === 'sub' || m === 'mul' || m === 'mixed' ? m : state.mode;
+        if (validLevel !== state.level || validLen !== state.roundLength) {
+          void handleApplySettings({ level: validLevel, roundLength: validLen, mode: state.mode });
+        }
+        if (validMode !== state.mode) {
+          dispatch({ type: 'SET_MODE', mode: validMode });
+          // start a new round with same level/length, new mode
+          dispatch({ type: 'NEW_ROUND_REQUEST' });
+          try {
+            const round = await fetchRound(state.level, state.roundLength, validMode);
+            dispatch({ type: 'NEW_ROUND_SUCCESS', round });
+          } catch (err: unknown) {
+            dispatch({ type: 'NEW_ROUND_FAILURE', error: (err as Error).message });
           }
-        } catch {}
-      }
-    } catch {}
+        }
+        if (lo) {
+          try {
+            const parsed = JSON.parse(lo) as { correct: number; total: number };
+            if (
+              parsed &&
+              typeof parsed.correct === 'number' &&
+              typeof parsed.total === 'number'
+            ) {
+              dispatch({ type: 'SET_LAST_OUTCOME', outcome: parsed });
+            }
+          } catch {}
+        }
+      } catch {}
+    })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist last outcome when summary appears
@@ -116,6 +133,19 @@ export default function GameClient({ initialLevel, initialRound }: Props) {
       } catch {}
     }
   }, [state.phase, state.lastOutcome, state.level]);
+
+  // Global Enter handler during feedback to advance quickly
+  useEffect(() => {
+    if (state.phase !== 'feedback') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.repeat) {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [state.phase]);
 
   if (state.phase === 'loading') {
     return (
@@ -199,10 +229,11 @@ export default function GameClient({ initialLevel, initialRound }: Props) {
         )}
 
         <SettingsPanel
-          key={`${String(!!state.settingsOpen)}-${state.level}-${state.roundLength}`}
+          key={`${String(!!state.settingsOpen)}-${state.level}-${state.roundLength}-${state.mode}`}
           open={!!state.settingsOpen}
           level={state.level}
           roundLength={state.roundLength}
+          mode={state.mode}
           onClose={handleCloseSettings}
           onApply={handleApplySettings}
         />

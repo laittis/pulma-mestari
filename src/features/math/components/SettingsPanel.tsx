@@ -8,16 +8,19 @@ type Props = {
   open: boolean;
   level: number;
   roundLength: number;
+  mode: 'mixed' | 'add' | 'sub' | 'mul';
   onClose: () => void;
-  onApply: (opts: { level: number; roundLength: number }) => void;
+  onApply: (opts: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => void;
 };
 
-export function SettingsPanel({ open, level, roundLength, onClose, onApply }: Props) {
+export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply }: Props) {
   const DEFAULT_LEVEL = 1;
   const DEFAULT_ROUND_LENGTH = 10;
+  const DEFAULT_MODE: 'mixed' | 'add' | 'sub' | 'mul' = 'mixed';
 
   const [localLevel, setLocalLevel] = useState(level);
   const [localLen, setLocalLen] = useState(roundLength);
+  const [localMode, setLocalMode] = useState<typeof mode>(mode);
 
   if (!open) return null;
 
@@ -31,6 +34,7 @@ export function SettingsPanel({ open, level, roundLength, onClose, onApply }: Pr
             onClick={() => {
               setLocalLevel(DEFAULT_LEVEL);
               setLocalLen(DEFAULT_ROUND_LENGTH);
+              setLocalMode(DEFAULT_MODE);
             }}
             className="px-3 py-1 text-sm rounded-full border border-gray-300 bg-white text-gray-700"
           >
@@ -51,6 +55,20 @@ export function SettingsPanel({ open, level, roundLength, onClose, onApply }: Pr
       </p>
 
       <div className="grid grid-cols-1 gap-3">
+        <label className="flex items-center justify-between gap-4">
+          <span className="text-sm text-gray-700">Pelitila</span>
+          <select
+            value={localMode}
+            onChange={(e) => setLocalMode(e.target.value as 'mixed' | 'add' | 'sub' | 'mul')}
+            className="px-2 py-1 border rounded-md"
+          >
+            <option value="mixed">Sekoitettu</option>
+            <option value="add">Yhteenlaskut</option>
+            <option value="sub">Vähennyslaskut</option>
+            <option value="mul">Kertolaskut</option>
+          </select>
+        </label>
+
         <label className="flex items-center justify-between gap-4">
           <span className="text-sm text-gray-700">Taso</span>
           <select
@@ -80,11 +98,11 @@ export function SettingsPanel({ open, level, roundLength, onClose, onApply }: Pr
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={() => onApply({ level: localLevel, roundLength: localLen })}
-            disabled={localLevel === level && localLen === roundLength}
+            onClick={() => onApply({ level: localLevel, roundLength: localLen, mode: localMode })}
+            disabled={localLevel === level && localLen === roundLength && localMode === mode}
             className={
               "px-3 py-2 text-sm rounded-full border-0 text-white " +
-              (localLevel === level && localLen === roundLength ? "bg-blue-300 cursor-not-allowed" : "bg-blue-600")
+              (localLevel === level && localLen === roundLength && localMode === mode ? "bg-blue-300 cursor-not-allowed" : "bg-blue-600")
             }
           >
             Käytä ja aloita uusi kierros

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pulmia Mestareille",
-  description: "Pulmia Mestareille - Matematiikan haasteita",
+  title: "Pulmamestarit",
+  description: "Pulmamestarit - Matematiikan haasteita",
 };
 
 export default function RootLayout({

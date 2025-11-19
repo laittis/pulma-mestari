@@ -6,6 +6,7 @@ import type { RoundOutcome } from "@/core/progress";
 import { nextLevel } from "@/core/progress";
 
 export type GamePhase = "question" | "feedback" | "summary" | "loading";
+export type GameMode = 'mixed' | 'add' | 'sub' | 'mul';
 
 export type GameState = {
   level: number;
@@ -19,6 +20,7 @@ export type GameState = {
   error?: string | null;
   settingsOpen?: boolean;
   roundLength: number;
+  mode: GameMode;
 };
 
 export type GameAction =
@@ -31,9 +33,10 @@ export type GameAction =
   | { type: "OPEN_SETTINGS" }
   | { type: "CLOSE_SETTINGS" }
   | { type: "APPLY_SETTINGS"; level: number; roundLength: number }
-  | { type: "SET_LAST_OUTCOME"; outcome: RoundOutcome };
+  | { type: "SET_LAST_OUTCOME"; outcome: RoundOutcome }
+  | { type: "SET_MODE"; mode: GameMode };
 
-export function initGameState(level: number, round: GeneratedRound): GameState {
+export function initGameState(level: number, round: GeneratedRound, mode: GameMode = 'mixed'): GameState {
   return {
     level,
     phase: "question",
@@ -46,6 +49,7 @@ export function initGameState(level: number, round: GeneratedRound): GameState {
     error: null,
     settingsOpen: false,
     roundLength: 10,
+    mode,
   };
 }
 
@@ -144,6 +148,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "SET_LAST_OUTCOME": {
       return { ...state, lastOutcome: action.outcome };
+    }
+
+    case "SET_MODE": {
+      return { ...state, mode: action.mode };
     }
 
     default:
