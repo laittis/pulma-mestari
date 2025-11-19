@@ -42,6 +42,7 @@ export function Controls({ phase, canSubmit, onSubmit, onNext, onRestart, onExit
         type="button"
         onClick={onRestart}
         className="px-3 py-2 text-sm rounded-full border border-gray-400 cursor-pointer bg-white text-gray-700 min-w-[110px]"
+        aria-label="Aloita kierros alusta"
       >
         Aloita alusta
       </button>

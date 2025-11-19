@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { GeneratedRound } from '@/features/math/tasks/types';
 import { TaskRenderer } from '@/features/math/components/TaskRenderer';
-import { gameReducer, initGameState, selectCurrentTask, selectTotals } from '@/core/state';
+import { gameReducer, initGameState, isValidPersistedState, selectCurrentTask, selectTotals } from '@/core/state';
 import { recordRound } from '@/core/stats';
 import { GameHeader } from '@/features/math/components/GameHeader';
 import { TaskPanel } from '@/features/math/components/TaskPanel';
@@ -69,7 +69,7 @@ function loadPersistedGame(initialMode: GameMode): PersistedGameState | null {
     const raw = localStorage.getItem(SAVED_GAME_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { state?: PersistedGameState };
-    if (!parsed?.state) return null;
+    if (!parsed?.state || !isValidPersistedState(parsed.state)) return null;
     if (parsed.state.mode !== initialMode) return null;
     return parsed.state;
   } catch {
@@ -271,11 +271,16 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     }
   }, [showExitConfirm]);
 
+  const exitHandlerRef = useRef(handleExitRequest);
   useEffect(() => {
-    const onGlobalExitRequest = () => handleExitRequest();
+    exitHandlerRef.current = handleExitRequest;
+  }, [handleExitRequest]);
+
+  useEffect(() => {
+    const onGlobalExitRequest = () => exitHandlerRef.current();
     window.addEventListener('pm-exit-request', onGlobalExitRequest);
     return () => window.removeEventListener('pm-exit-request', onGlobalExitRequest);
-  }, [handleExitRequest]);
+  }, []);
 
   const handleSaveAndExit = () => {
     persistGameState(state);

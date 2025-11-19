@@ -24,6 +24,29 @@ export type GameState = {
   autoAdvance: boolean;
 };
 
+type PersistedGameSubset = Pick<
+  GameState,
+  | "level"
+  | "phase"
+  | "round"
+  | "currentIndex"
+  | "answer"
+  | "correctCount"
+  | "lastCorrect"
+  | "lastOutcome"
+  | "roundLength"
+  | "mode"
+  | "autoAdvance"
+>;
+
+export function isValidPersistedState(value: PersistedGameSubset | null | undefined): value is PersistedGameSubset {
+  if (!value) return false;
+  if (!value.round || !Array.isArray(value.round.tasks) || value.round.tasks.length === 0) return false;
+  if (!Number.isFinite(value.level) || value.level < 1) return false;
+  if (!Number.isFinite(value.roundLength) || value.roundLength < 1) return false;
+  return true;
+}
+
 export type GameAction =
   | { type: "SET_ANSWER"; value: string }
   | { type: "SUBMIT" }
@@ -38,20 +61,7 @@ export type GameAction =
   | { type: "SET_MODE"; mode: GameMode }
   | {
       type: "LOAD_SAVED_GAME";
-      state: Pick<
-        GameState,
-        | "level"
-        | "phase"
-        | "round"
-        | "currentIndex"
-        | "answer"
-        | "correctCount"
-        | "lastCorrect"
-        | "lastOutcome"
-        | "roundLength"
-        | "mode"
-        | "autoAdvance"
-      >;
+      state: PersistedGameSubset;
     };
 
 export function initGameState(level: number, round: GeneratedRound, mode: GameMode = 'mixed'): GameState {
@@ -175,6 +185,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "LOAD_SAVED_GAME": {
+      if (!isValidPersistedState(action.state)) {
+        return state;
+      }
+
       const totalTasks = action.state.round.tasks.length;
       const clampedIndex = Math.min(Math.max(action.state.currentIndex, 0), Math.max(totalTasks - 1, 0));
       const safePhase = action.state.phase === "feedback" ? "feedback" : "question";
