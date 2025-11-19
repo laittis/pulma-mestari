@@ -14,6 +14,7 @@ import { SummaryPanel } from '@/features/math/components/SummaryPanel';
 import { Controls } from '@/features/math/components/Controls';
 import { SettingsPanel } from '@/features/math/components/SettingsPanel';
 import { fetchRound } from '@/features/math/api/rounds';
+import { trackAnswer, trackRoundComplete, trackRoundStart } from '@/core/analytics';
 
 type Props = {
   initialLevel: number;
@@ -33,6 +34,17 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
 
   const handleSubmit = () => {
     if (state.answer.trim() === '') return;
+    try {
+      const given = Number(state.answer.trim());
+      const ok = !Number.isNaN(given) && given === currentTask.correctAnswer;
+      trackAnswer({
+        correct: ok,
+        mode: state.mode,
+        level: state.level,
+        kind: currentTask.kind,
+        index: state.currentIndex + 1,
+      });
+    } catch {}
     dispatch({ type: 'SUBMIT' });
   };
 
@@ -43,12 +55,13 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     try {
       const round = await fetchRound(state.level, state.roundLength, state.mode);
       dispatch({ type: 'NEW_ROUND_SUCCESS', round });
+      trackRoundStart({ level: state.level, mode: state.mode, length: state.roundLength });
     } catch (err: unknown) {
       dispatch({ type: 'NEW_ROUND_FAILURE', error: (err as Error).message });
     }
   };
 
-  const handleOpenSettings = () => dispatch({ type: 'OPEN_SETTINGS' });
+  const handleToggleSettings = () => dispatch({ type: state.settingsOpen ? 'CLOSE_SETTINGS' : 'OPEN_SETTINGS' });
   const handleCloseSettings = () => dispatch({ type: 'CLOSE_SETTINGS' });
   const handleApplySettings = async ({ level, roundLength, mode }: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => {
     dispatch({ type: 'APPLY_SETTINGS', level, roundLength });
@@ -131,8 +144,14 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
       try {
         recordRound(state.level, state.lastOutcome);
       } catch {}
+      trackRoundComplete({
+        level: state.level,
+        mode: state.mode,
+        correct: state.lastOutcome.correct,
+        total: state.lastOutcome.total,
+      });
     }
-  }, [state.phase, state.lastOutcome, state.level]);
+  }, [state.phase, state.lastOutcome, state.level, state.mode]);
 
   // Global Enter handler during feedback to advance quickly
   useEffect(() => {
@@ -167,10 +186,10 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
           </Link>
           <button
             type="button"
-            onClick={handleOpenSettings}
+            onClick={handleToggleSettings}
             className="px-3 py-1 text-sm rounded-full border border-gray-300 bg-white text-gray-700"
           >
-            Asetukset
+            {state.settingsOpen ? 'Sulje' : 'Asetukset'}
           </button>
         </div>
         <GameHeader
@@ -179,6 +198,7 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
           questionNumber={questionNumber}
           totalTasks={totalTasks}
           lastOutcome={state.lastOutcome}
+          mode={state.mode}
         />
 
         {state.phase === 'summary' ? (

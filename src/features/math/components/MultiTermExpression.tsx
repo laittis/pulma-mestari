@@ -68,6 +68,7 @@ export function MultiTermExpression({ task, value, onChange, phase, onEnter }: P
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && onEnter && !e.repeat) onEnter();
                 }}
+                aria-label="Vastaus"
                 className="px-2 py-1 text-[22px] w-[90px] rounded-lg border-2 border-gray-300 outline-none text-center bg-white"
               />
             )}
@@ -77,4 +78,3 @@ export function MultiTermExpression({ task, value, onChange, phase, onEnter }: P
     </div>
   );
 }
-
