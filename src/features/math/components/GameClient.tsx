@@ -1,7 +1,7 @@
 // src/features/math/components/GameClient.tsx
 'use client';
 
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { GeneratedRound } from '@/features/math/tasks/types';
@@ -254,6 +254,15 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     return () => clearTimeout(t);
   }, [state.phase, state.lastCorrect, state.autoAdvance]);
 
+  const handleExitRequest = useCallback(() => {
+    if (isMidRound) {
+      setShowExitConfirm(true);
+      return;
+    }
+    clearPersistedGame();
+    router.push('/');
+  }, [isMidRound, router]);
+
   // Focus the primary exit action when the confirmation dialog opens
   const exitPrimaryRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -262,14 +271,11 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     }
   }, [showExitConfirm]);
 
-  const handleExitRequest = () => {
-    if (isMidRound) {
-      setShowExitConfirm(true);
-      return;
-    }
-    clearPersistedGame();
-    router.push('/');
-  };
+  useEffect(() => {
+    const onGlobalExitRequest = () => handleExitRequest();
+    window.addEventListener('pm-exit-request', onGlobalExitRequest);
+    return () => window.removeEventListener('pm-exit-request', onGlobalExitRequest);
+  }, [handleExitRequest]);
 
   const handleSaveAndExit = () => {
     persistGameState(state);
