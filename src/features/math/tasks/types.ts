@@ -1,4 +1,4 @@
-// src/lib/tasks/types.ts
+// src/features/math/tasks/types.ts
 
 export type Operation = 'add' | 'sub' | 'mul' | 'div';
 export type AnswerTarget = 'a' | 'b' | 'result';
@@ -18,3 +18,4 @@ export type GeneratedRound = {
   roundId: string;
   tasks: Task[];
 };
+

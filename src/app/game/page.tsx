@@ -1,12 +1,11 @@
 // src/app/game/page.tsx
-import GameClient from '@/components/GameClient';
-import { generateRound } from '@/lib/tasks/generate';
-import type { GeneratedRound } from '@/lib/tasks/types';
+import GameClient from '@/features/math/components/GameClient';
+import { generateRound } from '@/features/math/tasks/generate';
+import type { GeneratedRound } from '@/features/math/tasks/types';
 
 export default function GamePage() {
-  const initialGrade = 2;
-  const initialRound: GeneratedRound = generateRound(initialGrade, 10);
+  const initialLevel = 1;
+  const initialRound: GeneratedRound = generateRound(initialLevel, 10);
 
-  return <GameClient initialGrade={initialGrade} initialRound={initialRound} />;
+  return <GameClient initialLevel={initialLevel} initialRound={initialRound} />;
 }
-

@@ -1,7 +1,9 @@
-// src/components/TaskExpression.tsx
+// src/features/math/components/TaskExpression.tsx
 'use client';
 
-import type { Task } from '@/lib/tasks/types';
+import { useEffect, useRef } from 'react';
+import type { Task } from '@/features/math/tasks/types';
+import { opChar, computeResult } from '@/features/math/tasks/utils';
 
 type Phase = 'question' | 'feedback';
 
@@ -10,27 +12,22 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   phase: Phase;
+  onEnter?: () => void;
 };
 
-function opChar(op: Task['op']): string {
-  if (op === 'add') return '+';
-  if (op === 'sub') return '-';
-  if (op === 'mul') return '×';
-  if (op === 'div') return '÷';
-  return '?';
-}
-
-function computeResult(task: Task): number {
+function taskResult(task: Task): number {
   const { a, b, op } = task;
-  if (op === 'add') return a + b;
-  if (op === 'sub') return a - b;
-  if (op === 'mul') return a * b;
-  return Math.floor(a / (b || 1));
+  return computeResult(a, b, op);
 }
 
-export function TaskExpression({ task, value, onChange, phase }: Props) {
+export function TaskExpression({ task, value, onChange, phase, onEnter }: Props) {
   const symbol = opChar(task.op);
-  const result = computeResult(task);
+  const result = taskResult(task);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [phase, task.id]);
 
   const inputField = (
     <input
@@ -38,17 +35,12 @@ export function TaskExpression({ task, value, onChange, phase }: Props) {
       inputMode="numeric"
       pattern="[0-9]*"
       value={value}
-      onChange={e => onChange(e.target.value)}
-      style={{
-        padding: '6px 8px',
-        fontSize: 22,
-        width: 90,
-        borderRadius: 8,
-        border: '2px solid #d1d5db',
-        outline: 'none',
-        textAlign: 'center',
-        background: '#ffffff',
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && onEnter && !e.repeat) onEnter();
       }}
+      ref={inputRef}
+      className="px-2 py-1 text-[22px] w-[90px] rounded-lg border-2 border-gray-300 outline-none text-center bg-white"
     />
   );
 
@@ -60,7 +52,7 @@ export function TaskExpression({ task, value, onChange, phase }: Props) {
       : true;
 
   const resultSpan = (
-    <span style={{ minWidth: 40, textAlign: 'center' }}>
+    <span className="min-w-[40px] text-center inline-block">
       {showResult ? result : ' '}
     </span>
   );
@@ -100,4 +92,3 @@ export function TaskExpression({ task, value, onChange, phase }: Props) {
     </>
   );
 }
-
