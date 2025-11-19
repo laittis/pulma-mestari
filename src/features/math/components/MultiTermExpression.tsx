@@ -69,7 +69,7 @@ export function MultiTermExpression({ task, value, onChange, phase, onEnter }: P
                   if (e.key === 'Enter' && onEnter && !e.repeat) onEnter();
                 }}
                 aria-label="Vastaus"
-                className="px-2 py-1 text-[22px] w-[90px] rounded-lg border-2 border-gray-300 outline-none text-center bg-white"
+                className="px-2 py-1 text-[22px] w-[90px] rounded-lg border-2 border-gray-300 text-gray-900 bg-white shadow-sm outline-none text-center appearance-none"
               />
             )}
           </span>
