@@ -4,25 +4,41 @@
 import { useState } from "react";
 import { LevelGuide } from "@/features/math/components/LevelGuide";
 
+type Mode = 'mixed' | 'add' | 'sub' | 'mul';
+
 type Props = {
   open: boolean;
-  level: number;
-  roundLength: number;
-  mode: 'mixed' | 'add' | 'sub' | 'mul';
+  roundOptions: { level: number; roundLength: number; mode: Mode };
+  userSettings: { preferredLevel: number; preferredMode: Mode; defaultAutoAdvance: boolean };
   onClose: () => void;
-  onApply: (opts: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => void;
+  onApply: (opts: {
+    roundOptions: { level: number; roundLength: number; mode: Mode };
+    userSettings: { preferredLevel: number; preferredMode: Mode; defaultAutoAdvance: boolean };
+  }) => void;
 };
 
-export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply }: Props) {
+export function SettingsPanel({ open, roundOptions, userSettings, onClose, onApply }: Props) {
   const DEFAULT_LEVEL = 1;
   const DEFAULT_ROUND_LENGTH = 10;
-  const DEFAULT_MODE: 'mixed' | 'add' | 'sub' | 'mul' = 'mixed';
+  const DEFAULT_MODE: Mode = 'mixed';
 
-  const [localLevel, setLocalLevel] = useState(level);
-  const [localLen, setLocalLen] = useState(roundLength);
-  const [localMode, setLocalMode] = useState<typeof mode>(mode);
+  const [localLevel, setLocalLevel] = useState(roundOptions.level);
+  const [localLen, setLocalLen] = useState(roundOptions.roundLength);
+  const [localMode, setLocalMode] = useState<Mode>(roundOptions.mode);
+  const [preferredLevel, setPreferredLevel] = useState(userSettings.preferredLevel);
+  const [preferredMode, setPreferredMode] = useState<Mode>(userSettings.preferredMode);
+  const [defaultAutoAdvance, setDefaultAutoAdvance] = useState(userSettings.defaultAutoAdvance);
 
   if (!open) return null;
+
+  const roundOptionsChanged =
+    localLevel !== roundOptions.level ||
+    localLen !== roundOptions.roundLength ||
+    localMode !== roundOptions.mode;
+  const userSettingsChanged =
+    preferredLevel !== userSettings.preferredLevel ||
+    preferredMode !== userSettings.preferredMode ||
+    defaultAutoAdvance !== userSettings.defaultAutoAdvance;
 
   return (
     <div className="mt-4 p-4 rounded-xl border border-gray-200 bg-gray-50">
@@ -32,6 +48,9 @@ export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply
           <button
             type="button"
             onClick={() => {
+              setPreferredLevel(DEFAULT_LEVEL);
+              setPreferredMode(DEFAULT_MODE);
+              setDefaultAutoAdvance(true);
               setLocalLevel(DEFAULT_LEVEL);
               setLocalLen(DEFAULT_ROUND_LENGTH);
               setLocalMode(DEFAULT_MODE);
@@ -50,73 +69,127 @@ export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply
         </div>
       </div>
 
-      <div className="-mt-2 mb-3 space-y-1 text-xs text-gray-500">
+      <div className="-mt-2 mb-5 space-y-2 text-xs text-gray-600">
         <p>
-          Valitse taso ja tehtävien määrä. Pikavalinnat muuttavat valintaa; aloita uusi kierros painamalla &quot;Käytä&quot;.
+          Käytä käyttäjäasetuksia tallentaaksesi oletusarvot (tila, taso ja automaattinen eteneminen) tulevia istuntoja ja kierroksia varten.
         </p>
-        <p className="text-gray-500">
-          Automaattinen eteneminen säädetään kierroksen aikana ohjaimesta, eikä ole enää yleisasetus.
+        <p>
+          Kierroskohtaiset asetukset vaikuttavat vain seuraavaan kierrokseen. Ne voidaan poiketa käyttäjäasetuksista ilman, että oletukset muuttuvat.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
-        <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-gray-700">Pelitila</span>
-          <select
-            value={localMode}
-            onChange={(e) => setLocalMode(e.target.value as 'mixed' | 'add' | 'sub' | 'mul')}
-            className="px-2 py-1 border rounded-md"
-          >
-            <option value="mixed">Sekoitettu</option>
-            <option value="add">Yhteenlaskut</option>
-            <option value="sub">Vähennyslaskut</option>
-            <option value="mul">Kertolaskut</option>
-          </select>
-        </label>
+      <div className="grid grid-cols-1 gap-6">
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-800">Käyttäjäasetukset</h3>
+          <p className="text-xs text-gray-600">
+            Tallennetaan selaimen muistiin. Näitä käytetään oletuksina, kun palaat tai aloitat uuden kierroksen.
+          </p>
 
-        <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-gray-700">Taso</span>
-          <select
-            value={localLevel}
-            onChange={(e) => setLocalLevel(Number(e.target.value))}
-            className="px-2 py-1 border rounded-md"
-          >
-            {Array.from({ length: 6 }, (_, i) => i + 1).map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-        </label>
+          <label className="flex items-center justify-between gap-4">
+            <span className="text-sm text-gray-700">Oletustila</span>
+            <select
+              value={preferredMode}
+              onChange={(e) => setPreferredMode(e.target.value as Mode)}
+              className="px-2 py-1 border rounded-md"
+            >
+              <option value="mixed">Sekoitettu</option>
+              <option value="add">Yhteenlaskut</option>
+              <option value="sub">Vähennyslaskut</option>
+              <option value="mul">Kertolaskut</option>
+            </select>
+          </label>
 
-        <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-gray-700">Tehtäviä kierroksessa</span>
-          <input
-            type="number"
-            min={5}
-            max={30}
-            step={1}
-            value={localLen}
-            onChange={(e) => setLocalLen(Math.max(5, Math.min(30, Number(e.target.value))))}
-            className="w-24 px-2 py-1 border rounded-md"
-          />
-        </label>
+          <label className="flex items-center justify-between gap-4">
+            <span className="text-sm text-gray-700">Oletustaso</span>
+            <select
+              value={preferredLevel}
+              onChange={(e) => setPreferredLevel(Number(e.target.value))}
+              className="px-2 py-1 border rounded-md"
+            >
+              {Array.from({ length: 6 }, (_, i) => i + 1).map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex items-center justify-between gap-4">
+            <span className="text-sm text-gray-700">Automaattinen eteneminen</span>
+            <input
+              type="checkbox"
+              checked={defaultAutoAdvance}
+              onChange={(e) => setDefaultAutoAdvance(e.target.checked)}
+              className="h-4 w-4"
+            />
+          </label>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-800">Kierroksen asetukset</h3>
+          <p className="text-xs text-gray-600">Käytetään seuraavan kierroksen arvoina. Nämä eivät muuta yllä olevia oletuksia.</p>
+
+          <label className="flex items-center justify-between gap-4">
+            <span className="text-sm text-gray-700">Pelitila</span>
+            <select
+              value={localMode}
+              onChange={(e) => setLocalMode(e.target.value as Mode)}
+              className="px-2 py-1 border rounded-md"
+            >
+              <option value="mixed">Sekoitettu</option>
+              <option value="add">Yhteenlaskut</option>
+              <option value="sub">Vähennyslaskut</option>
+              <option value="mul">Kertolaskut</option>
+            </select>
+          </label>
+
+          <label className="flex items-center justify-between gap-4">
+            <span className="text-sm text-gray-700">Taso</span>
+            <select
+              value={localLevel}
+              onChange={(e) => setLocalLevel(Number(e.target.value))}
+              className="px-2 py-1 border rounded-md"
+            >
+              {Array.from({ length: 6 }, (_, i) => i + 1).map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex items-center justify-between gap-4">
+            <span className="text-sm text-gray-700">Tehtäviä kierroksessa</span>
+            <input
+              type="number"
+              min={5}
+              max={30}
+              step={1}
+              value={localLen}
+              onChange={(e) => setLocalLen(Math.max(5, Math.min(30, Number(e.target.value))))}
+              className="w-24 px-2 py-1 border rounded-md"
+            />
+          </label>
+        </section>
 
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={() => onApply({ level: localLevel, roundLength: localLen, mode: localMode })}
-            disabled={
-              localLevel === level &&
-              localLen === roundLength &&
-              localMode === mode
+            onClick={() =>
+              onApply({
+                roundOptions: { level: localLevel, roundLength: localLen, mode: localMode },
+                userSettings: {
+                  preferredLevel,
+                  preferredMode,
+                  defaultAutoAdvance,
+                },
+              })
             }
+            disabled={!roundOptionsChanged && !userSettingsChanged}
             className={
               "px-3 py-2 text-sm rounded-full border-0 text-white " +
-              (localLevel === level && localLen === roundLength && localMode === mode
+              (!roundOptionsChanged && !userSettingsChanged
                 ? "bg-blue-300 cursor-not-allowed"
                 : "bg-blue-600")
             }
           >
-            Käytä ja aloita uusi kierros
+            Tallenna ja aloita uusi kierros
           </button>
         </div>
       </div>
