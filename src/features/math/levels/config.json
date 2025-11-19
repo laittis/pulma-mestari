@@ -1,0 +1,59 @@
+{
+  "levels": [
+    {
+      "level": 1,
+      "ops": ["add"],
+      "ranges": { "addMax": 10, "subMax": 0, "mulMax": 0, "divMax": 0 },
+      "targetWeights": { "result": 1, "a": 0, "b": 0 },
+      "patterns": [
+        { "kind": "sum", "minTerms": 2, "maxTerms": 2, "holes": "resultOnly" }
+      ]
+    },
+    {
+      "level": 2,
+      "ops": ["add", "sub"],
+      "ranges": { "addMax": 20, "subMax": 20, "mulMax": 0, "divMax": 0 },
+      "targetWeights": { "result": 1, "a": 0, "b": 0 },
+      "patterns": [
+        { "kind": "sumdiff", "minTerms": 2, "maxTerms": 2, "holes": "resultOnly" }
+      ]
+    },
+    {
+      "level": 3,
+      "ops": ["add", "sub"],
+      "ranges": { "addMax": 100, "subMax": 100, "mulMax": 0, "divMax": 0 },
+      "targetWeights": { "result": 0.8, "a": 0.1, "b": 0.1 },
+      "patterns": [
+        { "kind": "sumdiff", "minTerms": 2, "maxTerms": 3, "holes": "oneOperand" }
+      ]
+    },
+    {
+      "level": 4,
+      "ops": ["add", "sub", "mul"],
+      "ranges": { "addMax": 100, "subMax": 100, "mulMax": 10, "divMax": 0 },
+      "targetWeights": { "result": 0.75, "a": 0.125, "b": 0.125 },
+      "patterns": [
+        { "kind": "mixed", "minTerms": 2, "maxTerms": 3, "holes": "resultOrOneOperand" }
+      ]
+    },
+    {
+      "level": 5,
+      "ops": ["add", "sub", "mul"],
+      "ranges": { "addMax": 100, "subMax": 100, "mulMax": 12, "divMax": 0 },
+      "targetWeights": { "result": 0.7, "a": 0.15, "b": 0.15 },
+      "patterns": [
+        { "kind": "mixed", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" }
+      ]
+    },
+    {
+      "level": 6,
+      "ops": ["add", "sub", "mul", "div"],
+      "ranges": { "addMax": 100, "subMax": 100, "mulMax": 12, "divMax": 12 },
+      "targetWeights": { "result": 0.6, "a": 0.2, "b": 0.2 },
+      "patterns": [
+        { "kind": "mixed", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" }
+      ]
+    }
+  ]
+}
+

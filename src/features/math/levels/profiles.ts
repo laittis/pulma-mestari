@@ -1,5 +1,7 @@
 // src/features/math/levels/profiles.ts
 import type { Operation } from "@/features/math/tasks/types";
+import type { LevelConfig, LevelDefinition } from "@/features/math/levels/schema";
+import rawConfig from "@/features/math/levels/config.json" assert { type: 'json' };
 
 export type TargetWeights = { result: number; a: number; b: number };
 
@@ -11,69 +13,44 @@ export type LevelProfile = {
   mulMax: number;
   divMax: number;
   targetWeights: TargetWeights;
+  // keep patterns around for future use
+  patterns?: LevelDefinition["patterns"];
 };
 
-const profiles: Record<number, LevelProfile> = {
-  1: {
-    level: 1,
-    allowedOps: ["add"],
-    addMax: 10,
-    subMax: 0,
-    mulMax: 0,
-    divMax: 0,
-    targetWeights: { result: 1, a: 0, b: 0 },
-  },
-  2: {
-    level: 2,
-    allowedOps: ["add", "sub"],
-    addMax: 20,
-    subMax: 20,
-    mulMax: 0,
-    divMax: 0,
-    targetWeights: { result: 1, a: 0, b: 0 },
-  },
-  3: {
-    level: 3,
-    allowedOps: ["add", "sub"],
-    addMax: 100,
-    subMax: 100,
-    mulMax: 0,
-    divMax: 0,
-    targetWeights: { result: 0.8, a: 0.1, b: 0.1 },
-  },
-  4: {
-    level: 4,
-    allowedOps: ["add", "sub", "mul"],
-    addMax: 100,
-    subMax: 100,
-    mulMax: 10,
-    divMax: 0,
-    targetWeights: { result: 0.75, a: 0.125, b: 0.125 },
-  },
-  5: {
-    level: 5,
-    allowedOps: ["add", "sub", "mul"],
-    addMax: 100,
-    subMax: 100,
-    mulMax: 12,
-    divMax: 0,
-    targetWeights: { result: 0.7, a: 0.15, b: 0.15 },
-  },
-  6: {
-    level: 6,
-    allowedOps: ["add", "sub", "mul", "div"],
-    addMax: 100,
-    subMax: 100,
-    mulMax: 12,
-    divMax: 12,
-    targetWeights: { result: 0.6, a: 0.2, b: 0.2 },
-  },
-};
+const cfg = rawConfig as LevelConfig;
+
+function buildProfile(def: LevelDefinition): LevelProfile {
+  return {
+    level: def.level,
+    allowedOps: def.ops,
+    addMax: def.ranges.addMax,
+    subMax: def.ranges.subMax,
+    mulMax: def.ranges.mulMax,
+    divMax: def.ranges.divMax,
+    targetWeights: def.targetWeights,
+    patterns: def.patterns,
+  };
+}
 
 export function getProfile(level: number): LevelProfile {
-  if (level <= 1) return profiles[1];
-  if (level >= 6) return profiles[6];
-  return profiles[level as 2 | 3 | 4 | 5];
+  const list = cfg.levels.slice().sort((a, b) => a.level - b.level);
+  if (list.length === 0) {
+    // fallback minimal profile
+    return {
+      level: 1,
+      allowedOps: ["add"],
+      addMax: 10,
+      subMax: 0,
+      mulMax: 0,
+      divMax: 0,
+      targetWeights: { result: 1, a: 0, b: 0 },
+    };
+  }
+  const min = list[0].level;
+  const max = list[list.length - 1].level;
+  const clamped = Math.max(min, Math.min(max, level));
+  const found = list.find((d) => d.level === clamped) ?? list[0];
+  return buildProfile(found);
 }
 
 export function pickOpFromProfile(level: number): Operation {
@@ -89,4 +66,3 @@ export function pickTargetFromWeights(weights: TargetWeights): "result" | "a" | 
   if (r < result + a) return "a";
   return "b";
 }
-
