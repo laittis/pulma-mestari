@@ -2,6 +2,7 @@
 "use client";
 
 import { getProfile } from "@/features/math/levels/profiles";
+import rawConfig from "@/features/math/levels/config.json" assert { type: 'json' };
 import { opChar } from "@/features/math/tasks/utils";
 
 function opsText(level: number): string {
@@ -26,11 +27,13 @@ function targetText(level: number): string {
 }
 
 export function LevelGuide() {
+  const cfg = rawConfig as { levels: Array<{ level: number }> };
+  const levels = cfg.levels.map(l => l.level).sort((a,b) => a-b);
   return (
     <div className="mt-4 p-3 rounded-lg border border-gray-200 bg-white">
       <h3 className="m-0 text-sm text-gray-700">Tasot</h3>
       <ul className="mt-2 mb-0 text-xs text-gray-600 space-y-1">
-        {Array.from({ length: 6 }, (_, i) => i + 1).map((lvl) => (
+        {levels.map((lvl) => (
           <li key={lvl}>
             <span className="font-medium">Taso {lvl}:</span>{" "}
             {opsText(lvl)} — {rangesText(lvl)} — {targetText(lvl)}
@@ -40,4 +43,3 @@ export function LevelGuide() {
     </div>
   );
 }
-

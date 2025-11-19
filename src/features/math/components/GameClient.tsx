@@ -4,7 +4,7 @@
 import { useEffect, useReducer, useRef } from 'react';
 import Link from 'next/link';
 import type { GeneratedRound } from '@/features/math/tasks/types';
-import { TaskExpression } from '@/features/math/components/TaskExpression';
+import { TaskRenderer } from '@/features/math/components/TaskRenderer';
 import { gameReducer, initGameState, selectCurrentTask, selectTotals } from '@/core/state';
 import { recordRound } from '@/core/stats';
 import { GameHeader } from '@/features/math/components/GameHeader';
@@ -169,7 +169,7 @@ export default function GameClient({ initialLevel, initialRound }: Props) {
         ) : (
           <>
             <TaskPanel phase={state.phase} isCorrect={isCorrect}>
-              <TaskExpression
+              <TaskRenderer
                 task={currentTask}
                 value={state.answer}
                 onChange={(v) => dispatch({ type: 'SET_ANSWER', value: v })}

@@ -20,7 +20,8 @@ export type LevelDefinition = {
   ranges: { addMax: number; subMax: number; mulMax: number; divMax: number };
   targetWeights: { result: number; a: number; b: number };
   patterns?: Pattern[];
+  exprChance?: number; // 0..1 chance to prefer expression tasks when patterns exist
+  totalMax?: number;   // optional cap for expression total (e.g., <= 20)
 };
 
 export type LevelConfig = { levels: LevelDefinition[] };
-

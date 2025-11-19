@@ -15,6 +15,8 @@ export type LevelProfile = {
   targetWeights: TargetWeights;
   // keep patterns around for future use
   patterns?: LevelDefinition["patterns"];
+  exprChance: number;
+  totalMax?: number;
 };
 
 const cfg = rawConfig as LevelConfig;
@@ -29,6 +31,8 @@ function buildProfile(def: LevelDefinition): LevelProfile {
     divMax: def.ranges.divMax,
     targetWeights: def.targetWeights,
     patterns: def.patterns,
+    exprChance: def.exprChance ?? 0.4,
+    totalMax: def.totalMax,
   };
 }
 
@@ -44,6 +48,7 @@ export function getProfile(level: number): LevelProfile {
       mulMax: 0,
       divMax: 0,
       targetWeights: { result: 1, a: 0, b: 0 },
+      exprChance: 0.3,
     };
   }
   const min = list[0].level;

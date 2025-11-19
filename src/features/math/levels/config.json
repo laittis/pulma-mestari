@@ -1,59 +1,100 @@
 {
   "levels": [
-    {
-      "level": 1,
+    { "level": 1,
       "ops": ["add"],
       "ranges": { "addMax": 10, "subMax": 0, "mulMax": 0, "divMax": 0 },
       "targetWeights": { "result": 1, "a": 0, "b": 0 },
-      "patterns": [
-        { "kind": "sum", "minTerms": 2, "maxTerms": 2, "holes": "resultOnly" }
-      ]
+      "totalMax": 10,
+      "exprChance": 0.15,
+      "patterns": [ { "kind": "sum", "minTerms": 2, "maxTerms": 2, "holes": "resultOnly" } ]
     },
-    {
-      "level": 2,
+    { "level": 2,
+      "ops": ["add"],
+      "ranges": { "addMax": 10, "subMax": 0, "mulMax": 0, "divMax": 0 },
+      "targetWeights": { "result": 1, "a": 0, "b": 0 },
+      "totalMax": 20,
+      "exprChance": 0.25,
+      "patterns": [ { "kind": "sum", "minTerms": 2, "maxTerms": 3, "holes": "resultOnly" } ]
+    },
+    { "level": 3,
+      "ops": ["add"],
+      "ranges": { "addMax": 20, "subMax": 0, "mulMax": 0, "divMax": 0 },
+      "targetWeights": { "result": 1, "a": 0, "b": 0 },
+      "totalMax": 20,
+      "exprChance": 0.35,
+      "patterns": [ { "kind": "sum", "minTerms": 2, "maxTerms": 3, "holes": "resultOnly" } ]
+    },
+    { "level": 4,
       "ops": ["add", "sub"],
       "ranges": { "addMax": 20, "subMax": 20, "mulMax": 0, "divMax": 0 },
       "targetWeights": { "result": 1, "a": 0, "b": 0 },
-      "patterns": [
-        { "kind": "sumdiff", "minTerms": 2, "maxTerms": 2, "holes": "resultOnly" }
-      ]
+      "totalMax": 20,
+      "exprChance": 0.35,
+      "patterns": [ { "kind": "sumdiff", "minTerms": 2, "maxTerms": 2, "holes": "resultOnly" } ]
     },
-    {
-      "level": 3,
+    { "level": 5,
+      "ops": ["add", "sub"],
+      "ranges": { "addMax": 20, "subMax": 20, "mulMax": 0, "divMax": 0 },
+      "targetWeights": { "result": 0.95, "a": 0.03, "b": 0.02 },
+      "totalMax": 20,
+      "exprChance": 0.4,
+      "patterns": [ { "kind": "sumdiff", "minTerms": 2, "maxTerms": 3, "holes": "resultOnly" } ]
+    },
+    { "level": 6,
+      "ops": ["add", "sub"],
+      "ranges": { "addMax": 50, "subMax": 50, "mulMax": 0, "divMax": 0 },
+      "targetWeights": { "result": 0.9, "a": 0.06, "b": 0.04 },
+      "totalMax": 50,
+      "exprChance": 0.45,
+      "patterns": [ { "kind": "sumdiff", "minTerms": 2, "maxTerms": 3, "holes": "resultOrOneOperand" } ]
+    },
+    { "level": 7,
+      "ops": ["add", "sub"],
+      "ranges": { "addMax": 50, "subMax": 50, "mulMax": 0, "divMax": 0 },
+      "targetWeights": { "result": 0.85, "a": 0.08, "b": 0.07 },
+      "totalMax": 80,
+      "exprChance": 0.5,
+      "patterns": [ { "kind": "sumdiff", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" } ]
+    },
+    { "level": 8,
       "ops": ["add", "sub"],
       "ranges": { "addMax": 100, "subMax": 100, "mulMax": 0, "divMax": 0 },
       "targetWeights": { "result": 0.8, "a": 0.1, "b": 0.1 },
-      "patterns": [
-        { "kind": "sumdiff", "minTerms": 2, "maxTerms": 3, "holes": "oneOperand" }
-      ]
+      "totalMax": 120,
+      "exprChance": 0.55,
+      "patterns": [ { "kind": "sumdiff", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" } ]
     },
-    {
-      "level": 4,
+    { "level": 9,
+      "ops": ["add", "sub", "mul"],
+      "ranges": { "addMax": 100, "subMax": 100, "mulMax": 5, "divMax": 0 },
+      "targetWeights": { "result": 0.85, "a": 0.08, "b": 0.07 },
+      "totalMax": 150,
+      "exprChance": 0.5,
+      "patterns": [ { "kind": "mixed", "minTerms": 2, "maxTerms": 3, "holes": "resultOnly" } ]
+    },
+    { "level": 10,
       "ops": ["add", "sub", "mul"],
       "ranges": { "addMax": 100, "subMax": 100, "mulMax": 10, "divMax": 0 },
-      "targetWeights": { "result": 0.75, "a": 0.125, "b": 0.125 },
-      "patterns": [
-        { "kind": "mixed", "minTerms": 2, "maxTerms": 3, "holes": "resultOrOneOperand" }
-      ]
+      "targetWeights": { "result": 0.75, "a": 0.13, "b": 0.12 },
+      "totalMax": 200,
+      "exprChance": 0.6,
+      "patterns": [ { "kind": "mixed", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" } ]
     },
-    {
-      "level": 5,
+    { "level": 11,
+      "ops": ["add", "sub", "mul"],
+      "ranges": { "addMax": 100, "subMax": 100, "mulMax": 10, "divMax": 0 },
+      "targetWeights": { "result": 0.7, "a": 0.15, "b": 0.15 },
+      "totalMax": 200,
+      "exprChance": 0.6,
+      "patterns": [ { "kind": "mixed", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" } ]
+    },
+    { "level": 12,
       "ops": ["add", "sub", "mul"],
       "ranges": { "addMax": 100, "subMax": 100, "mulMax": 12, "divMax": 0 },
-      "targetWeights": { "result": 0.7, "a": 0.15, "b": 0.15 },
-      "patterns": [
-        { "kind": "mixed", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" }
-      ]
-    },
-    {
-      "level": 6,
-      "ops": ["add", "sub", "mul", "div"],
-      "ranges": { "addMax": 100, "subMax": 100, "mulMax": 12, "divMax": 12 },
-      "targetWeights": { "result": 0.6, "a": 0.2, "b": 0.2 },
-      "patterns": [
-        { "kind": "mixed", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" }
-      ]
+      "targetWeights": { "result": 0.65, "a": 0.18, "b": 0.17 },
+      "totalMax": 250,
+      "exprChance": 0.65,
+      "patterns": [ { "kind": "mixed", "minTerms": 2, "maxTerms": 4, "holes": "resultOrOneOperand" } ]
     }
   ]
 }
-
