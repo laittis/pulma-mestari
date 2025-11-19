@@ -9,12 +9,13 @@ type Props = {
   onSubmit: () => void;
   onNext: () => void;
   onRestart: () => void;
+  onExit: () => void;
   submitType?: 'button' | 'submit';
 };
 
-export function Controls({ phase, canSubmit, onSubmit, onNext, onRestart, submitType = 'button' }: Props) {
+export function Controls({ phase, canSubmit, onSubmit, onNext, onRestart, onExit, submitType = 'button' }: Props) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 flex-wrap">
       {phase === "question" ? (
         <button
           type={submitType}
@@ -43,6 +44,15 @@ export function Controls({ phase, canSubmit, onSubmit, onNext, onRestart, submit
         className="px-3 py-2 text-sm rounded-full border border-gray-400 cursor-pointer bg-white text-gray-700 min-w-[110px]"
       >
         Aloita alusta
+      </button>
+
+      <button
+        type="button"
+        onClick={onExit}
+        className="px-3 py-2 text-sm rounded-full border border-gray-400 cursor-pointer bg-white text-gray-700 min-w-[110px]"
+        aria-label="Palaa päävalikkoon"
+      >
+        Päävalikko
       </button>
     </div>
   );

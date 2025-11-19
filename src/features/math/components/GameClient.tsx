@@ -1,8 +1,9 @@
 // src/features/math/components/GameClient.tsx
 'use client';
 
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { GeneratedRound } from '@/features/math/tasks/types';
 import { TaskRenderer } from '@/features/math/components/TaskRenderer';
 import { gameReducer, initGameState, selectCurrentTask, selectTotals } from '@/core/state';
@@ -16,6 +17,7 @@ import { SettingsPanel } from '@/features/math/components/SettingsPanel';
 import { fetchRound } from '@/features/math/api/rounds';
 import { trackAnswer, trackRoundComplete, trackRoundStart } from '@/core/analytics';
 import { CelebrationOverlay } from '@/features/math/components/CelebrationOverlay';
+import type { GameMode, GameState } from '@/core/state';
 
 type Props = {
   initialLevel: number;
@@ -23,15 +25,76 @@ type Props = {
   initialMode?: 'mixed' | 'add' | 'sub' | 'mul';
 };
 
+type PersistedGameState = Pick<
+  GameState,
+  | 'level'
+  | 'phase'
+  | 'round'
+  | 'currentIndex'
+  | 'answer'
+  | 'correctCount'
+  | 'lastCorrect'
+  | 'lastOutcome'
+  | 'roundLength'
+  | 'mode'
+  | 'autoAdvance'
+>;
+
+const SAVED_GAME_KEY = 'pm.savedGame';
+
+function persistGameState(state: GameState) {
+  if (state.phase === 'loading') return;
+
+  const payload: PersistedGameState = {
+    level: state.level,
+    phase: state.phase,
+    round: state.round,
+    currentIndex: state.currentIndex,
+    answer: state.answer,
+    correctCount: state.correctCount,
+    lastCorrect: state.lastCorrect,
+    lastOutcome: state.lastOutcome,
+    roundLength: state.roundLength,
+    mode: state.mode,
+    autoAdvance: state.autoAdvance,
+  };
+
+  try {
+    localStorage.setItem(SAVED_GAME_KEY, JSON.stringify({ state: payload, savedAt: Date.now() }));
+  } catch {}
+}
+
+function loadPersistedGame(initialMode: GameMode): PersistedGameState | null {
+  try {
+    const raw = localStorage.getItem(SAVED_GAME_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { state?: PersistedGameState };
+    if (!parsed?.state) return null;
+    if (parsed.state.mode !== initialMode) return null;
+    return parsed.state;
+  } catch {
+    return null;
+  }
+}
+
+function clearPersistedGame() {
+  try {
+    localStorage.removeItem(SAVED_GAME_KEY);
+  } catch {}
+}
+
 export default function GameClient({ initialLevel, initialRound, initialMode = 'mixed' }: Props) {
   const [state, dispatch] = useReducer(
     gameReducer,
     initGameState(initialLevel, initialRound, initialMode)
   );
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const router = useRouter();
 
   const currentTask = selectCurrentTask(state);
   const { totalTasks, questionNumber } = selectTotals(state);
   const isCorrect = state.lastCorrect === true;
+  const isMidRound = state.phase !== 'summary' && state.phase !== 'loading';
 
   const handleSubmit = () => {
     if (state.answer.trim() === '') return;
@@ -138,6 +201,17 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Restore a saved round when returning to the game
+  useEffect(() => {
+    try {
+      const saved = loadPersistedGame(initialMode as GameMode);
+      if (saved) {
+        dispatch({ type: 'LOAD_SAVED_GAME', state: saved });
+      }
+      clearPersistedGame();
+    } catch {}
+  }, [initialMode]);
+
   // Persist last outcome when summary appears
   useEffect(() => {
     if (state.phase === 'summary' && state.lastOutcome) {
@@ -179,6 +253,35 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     }, delay);
     return () => clearTimeout(t);
   }, [state.phase, state.lastCorrect, state.autoAdvance]);
+
+  // Focus the primary exit action when the confirmation dialog opens
+  const exitPrimaryRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (showExitConfirm) {
+      exitPrimaryRef.current?.focus();
+    }
+  }, [showExitConfirm]);
+
+  const handleExitRequest = () => {
+    if (isMidRound) {
+      setShowExitConfirm(true);
+      return;
+    }
+    clearPersistedGame();
+    router.push('/');
+  };
+
+  const handleSaveAndExit = () => {
+    persistGameState(state);
+    setShowExitConfirm(false);
+    router.push('/');
+  };
+
+  const handleExitWithoutSave = () => {
+    clearPersistedGame();
+    setShowExitConfirm(false);
+    router.push('/');
+  };
 
   if (state.phase === 'loading') {
     return (
@@ -255,6 +358,7 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
                   onSubmit={handleSubmit}
                   onNext={handleNext}
                   onRestart={handleNewRound}
+                  onExit={handleExitRequest}
                   submitType="submit"
                 />
               </form>
@@ -280,6 +384,7 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
                   onSubmit={handleSubmit}
                   onNext={handleNext}
                   onRestart={handleNewRound}
+                  onExit={handleExitRequest}
                 />
               </>
             )}
@@ -300,6 +405,58 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
           onClose={handleCloseSettings}
           onApply={handleApplySettings}
         />
+
+        {showExitConfirm && (
+          <div
+            className="fixed inset-0 flex items-center justify-center bg-black/40 p-4"
+            role="presentation"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                setShowExitConfirm(false);
+              }
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="exit-dialog-title"
+              className="w-full max-w-[420px] rounded-2xl bg-white p-5 shadow-xl focus:outline-none"
+            >
+              <h2 id="exit-dialog-title" className="text-lg font-semibold m-0">
+                Poistu päävalikkoon?
+              </h2>
+              <p className="mt-2 mb-4 text-sm text-gray-700">
+                Olet kesken kierroksen. Haluatko tallentaa edistymisesi ennen poistumista vai jatkaa ilman
+                tallennusta?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  ref={exitPrimaryRef}
+                  onClick={handleSaveAndExit}
+                  className="flex-1 min-w-[150px] px-3 py-2 rounded-full border-0 bg-blue-600 text-white text-sm"
+                >
+                  Tallenna ja poistu
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExitWithoutSave}
+                  className="flex-1 min-w-[150px] px-3 py-2 rounded-full border border-gray-300 bg-white text-gray-800 text-sm"
+                >
+                  Poistu tallentamatta
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowExitConfirm(false)}
+                  className="flex-1 min-w-[150px] px-3 py-2 rounded-full border border-gray-300 bg-white text-gray-800 text-sm"
+                >
+                  Jatka kierrosta
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

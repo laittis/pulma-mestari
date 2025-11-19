@@ -35,7 +35,24 @@ export type GameAction =
   | { type: "CLOSE_SETTINGS" }
   | { type: "APPLY_SETTINGS"; level: number; roundLength: number; autoAdvance?: boolean }
   | { type: "SET_LAST_OUTCOME"; outcome: RoundOutcome }
-  | { type: "SET_MODE"; mode: GameMode };
+  | { type: "SET_MODE"; mode: GameMode }
+  | {
+      type: "LOAD_SAVED_GAME";
+      state: Pick<
+        GameState,
+        | "level"
+        | "phase"
+        | "round"
+        | "currentIndex"
+        | "answer"
+        | "correctCount"
+        | "lastCorrect"
+        | "lastOutcome"
+        | "roundLength"
+        | "mode"
+        | "autoAdvance"
+      >;
+    };
 
 export function initGameState(level: number, round: GeneratedRound, mode: GameMode = 'mixed'): GameState {
   return {
@@ -49,7 +66,7 @@ export function initGameState(level: number, round: GeneratedRound, mode: GameMo
     lastOutcome: null,
     error: null,
     settingsOpen: false,
-    roundLength: 10,
+    roundLength: round.tasks.length || 10,
     mode,
     autoAdvance: true,
   };
@@ -155,6 +172,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "SET_MODE": {
       return { ...state, mode: action.mode };
+    }
+
+    case "LOAD_SAVED_GAME": {
+      const totalTasks = action.state.round.tasks.length;
+      const clampedIndex = Math.min(Math.max(action.state.currentIndex, 0), Math.max(totalTasks - 1, 0));
+      const safePhase = action.state.phase === "feedback" ? "feedback" : "question";
+      return {
+        ...state,
+        ...action.state,
+        currentIndex: clampedIndex,
+        phase: totalTasks > 0 ? safePhase : "question",
+        answer: action.state.answer ?? "",
+        settingsOpen: false,
+        error: null,
+      };
     }
 
     default:
