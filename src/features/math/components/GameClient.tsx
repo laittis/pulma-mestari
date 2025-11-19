@@ -64,13 +64,13 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
 
   const handleToggleSettings = () => dispatch({ type: state.settingsOpen ? 'CLOSE_SETTINGS' : 'OPEN_SETTINGS' });
   const handleCloseSettings = () => dispatch({ type: 'CLOSE_SETTINGS' });
+  const handleAutoAdvanceChange = (value: boolean) => dispatch({ type: 'SET_AUTO_ADVANCE', value });
   const handleApplySettings = async ({
     level,
     roundLength,
     mode,
-    autoAdvance,
-  }: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul'; autoAdvance: boolean }) => {
-    dispatch({ type: 'APPLY_SETTINGS', level, roundLength, autoAdvance });
+    }: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => {
+    dispatch({ type: 'APPLY_SETTINGS', level, roundLength });
     if (mode !== state.mode) {
       dispatch({ type: 'SET_MODE', mode });
     }
@@ -115,11 +115,12 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
         const validAutoAdvance = aa === 'true' || aa === 'false' ? aa === 'true' : state.autoAdvance;
         const shouldUpdateRoundSettings =
           validLevel !== state.level || validLen !== state.roundLength || validMode !== state.mode;
-        const shouldUpdateAutoAdvance = validAutoAdvance !== state.autoAdvance;
         if (shouldUpdateRoundSettings) {
-          void handleApplySettings({ level: validLevel, roundLength: validLen, mode: validMode, autoAdvance: validAutoAdvance });
-        } else if (shouldUpdateAutoAdvance) {
-          dispatch({ type: 'APPLY_SETTINGS', level: state.level, roundLength: state.roundLength, autoAdvance: validAutoAdvance });
+          void handleApplySettings({ level: validLevel, roundLength: validLen, mode: validMode });
+        }
+
+        if (validAutoAdvance !== state.autoAdvance) {
+          dispatch({ type: 'SET_AUTO_ADVANCE', value: validAutoAdvance });
         }
 
         if (lo) {
@@ -255,6 +256,8 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
                   onSubmit={handleSubmit}
                   onNext={handleNext}
                   onRestart={handleNewRound}
+                  autoAdvance={state.autoAdvance}
+                  onToggleAutoAdvance={handleAutoAdvanceChange}
                   submitType="submit"
                 />
               </form>
@@ -280,6 +283,8 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
                   onSubmit={handleSubmit}
                   onNext={handleNext}
                   onRestart={handleNewRound}
+                  autoAdvance={state.autoAdvance}
+                  onToggleAutoAdvance={handleAutoAdvanceChange}
                 />
               </>
             )}
@@ -291,12 +296,11 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
         )}
 
         <SettingsPanel
-          key={`${String(!!state.settingsOpen)}-${state.level}-${state.roundLength}-${state.mode}-${String(state.autoAdvance)}`}
+          key={`${String(!!state.settingsOpen)}-${state.level}-${state.roundLength}-${state.mode}`}
           open={!!state.settingsOpen}
           level={state.level}
           roundLength={state.roundLength}
           mode={state.mode}
-          autoAdvance={state.autoAdvance}
           onClose={handleCloseSettings}
           onApply={handleApplySettings}
         />
