@@ -1,7 +1,7 @@
 // src/features/math/components/GameClient.tsx
 'use client';
 
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, type MouseEvent } from 'react';
 import Link from 'next/link';
 import type { GeneratedRound } from '@/features/math/tasks/types';
 import { TaskRenderer } from '@/features/math/components/TaskRenderer';
@@ -65,6 +65,13 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
   const handleToggleSettings = () => dispatch({ type: state.settingsOpen ? 'CLOSE_SETTINGS' : 'OPEN_SETTINGS' });
   const handleCloseSettings = () => dispatch({ type: 'CLOSE_SETTINGS' });
   const handleAutoAdvanceChange = (value: boolean) => dispatch({ type: 'SET_AUTO_ADVANCE', value });
+  const handleBackToMenu = (event: MouseEvent<HTMLAnchorElement>) => {
+    const hasActiveRound = state.phase === 'question' || state.phase === 'feedback';
+    if (hasActiveRound && !window.confirm('Poistutaanko kierrokselta? Edistymistä ei tallenneta.')) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
   const handleApplySettings = async ({
     level,
     roundLength,
@@ -194,6 +201,13 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
       <div className="bg-white rounded-2xl p-6 w-full max-w-[500px] shadow-lg">
         <CelebrationOverlay show={state.phase === 'feedback' && isCorrect} kind={isCorrect ? 'success' : 'error'} />
         <div className="flex justify-end mb-2 gap-2">
+          <Link
+            href="/"
+            onClick={handleBackToMenu}
+            className="px-3 py-1 text-sm rounded-full border border-gray-300 bg-white text-gray-700"
+          >
+            Takaisin päävalikkoon
+          </Link>
           <Link
             href="/stats"
             className="px-3 py-1 text-sm rounded-full border border-gray-300 bg-white text-gray-700"
