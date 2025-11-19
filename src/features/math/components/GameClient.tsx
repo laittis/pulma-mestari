@@ -64,8 +64,13 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
 
   const handleToggleSettings = () => dispatch({ type: state.settingsOpen ? 'CLOSE_SETTINGS' : 'OPEN_SETTINGS' });
   const handleCloseSettings = () => dispatch({ type: 'CLOSE_SETTINGS' });
-  const handleApplySettings = async ({ level, roundLength, mode }: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => {
-    dispatch({ type: 'APPLY_SETTINGS', level, roundLength, autoAdvance: state.autoAdvance });
+  const handleApplySettings = async ({
+    level,
+    roundLength,
+    mode,
+    autoAdvance,
+  }: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul'; autoAdvance: boolean }) => {
+    dispatch({ type: 'APPLY_SETTINGS', level, roundLength, autoAdvance });
     if (mode !== state.mode) {
       dispatch({ type: 'SET_MODE', mode });
     }
@@ -100,28 +105,24 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
         const l = localStorage.getItem('pm.level');
         const len = localStorage.getItem('pm.roundLength');
         const lo = localStorage.getItem('pm.lastOutcome');
-      const m = localStorage.getItem('pm.mode');
-      const aa = localStorage.getItem('pm.autoAdvance');
+        const m = localStorage.getItem('pm.mode');
+        const aa = localStorage.getItem('pm.autoAdvance');
         const level = l ? Number(l) : NaN;
         const roundLength = len ? Number(len) : NaN;
         const validLevel = Number.isFinite(level) && level >= 1 && level <= 99 ? level : state.level;
         const validLen = Number.isFinite(roundLength) && roundLength >= 5 && roundLength <= 30 ? roundLength : state.roundLength;
         const validMode = m === 'add' || m === 'sub' || m === 'mul' || m === 'mixed' ? m : state.mode;
-      if (validLevel !== state.level || validLen !== state.roundLength) {
-          void handleApplySettings({ level: validLevel, roundLength: validLen, mode: state.mode });
+        const validAutoAdvance = aa === 'true' || aa === 'false' ? aa === 'true' : state.autoAdvance;
+        const shouldUpdateRoundSettings =
+          validLevel !== state.level || validLen !== state.roundLength || validMode !== state.mode;
+        const shouldUpdateAutoAdvance = validAutoAdvance !== state.autoAdvance;
+        if (shouldUpdateRoundSettings) {
+          void handleApplySettings({ level: validLevel, roundLength: validLen, mode: validMode, autoAdvance: validAutoAdvance });
+        } else if (shouldUpdateAutoAdvance) {
+          dispatch({ type: 'APPLY_SETTINGS', level: state.level, roundLength: state.roundLength, autoAdvance: validAutoAdvance });
         }
-      if (validMode !== state.mode) {
-          dispatch({ type: 'SET_MODE', mode: validMode });
-          // start a new round with same level/length, new mode
-          dispatch({ type: 'NEW_ROUND_REQUEST' });
-          try {
-            const round = await fetchRound(state.level, state.roundLength, validMode);
-            dispatch({ type: 'NEW_ROUND_SUCCESS', round });
-          } catch (err: unknown) {
-            dispatch({ type: 'NEW_ROUND_FAILURE', error: (err as Error).message });
-          }
-        }
-      if (lo) {
+
+        if (lo) {
           try {
             const parsed = JSON.parse(lo) as { correct: number; total: number };
             if (
@@ -132,10 +133,6 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
               dispatch({ type: 'SET_LAST_OUTCOME', outcome: parsed });
             }
           } catch {}
-        }
-        if (aa === 'true' || aa === 'false') {
-          // update autoAdvance without starting new round
-          dispatch({ type: 'APPLY_SETTINGS', level: state.level, roundLength: state.roundLength, autoAdvance: aa === 'true' });
         }
       } catch {}
     })();
@@ -294,11 +291,12 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
         )}
 
         <SettingsPanel
-          key={`${String(!!state.settingsOpen)}-${state.level}-${state.roundLength}-${state.mode}`}
+          key={`${String(!!state.settingsOpen)}-${state.level}-${state.roundLength}-${state.mode}-${String(state.autoAdvance)}`}
           open={!!state.settingsOpen}
           level={state.level}
           roundLength={state.roundLength}
           mode={state.mode}
+          autoAdvance={state.autoAdvance}
           onClose={handleCloseSettings}
           onApply={handleApplySettings}
         />

@@ -9,19 +9,21 @@ type Props = {
   level: number;
   roundLength: number;
   mode: 'mixed' | 'add' | 'sub' | 'mul';
+  autoAdvance: boolean;
   onClose: () => void;
   onApply: (opts: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul'; autoAdvance: boolean }) => void;
 };
 
-export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply }: Props) {
+export function SettingsPanel({ open, level, roundLength, mode, autoAdvance, onClose, onApply }: Props) {
   const DEFAULT_LEVEL = 1;
   const DEFAULT_ROUND_LENGTH = 10;
   const DEFAULT_MODE: 'mixed' | 'add' | 'sub' | 'mul' = 'mixed';
+  const DEFAULT_AUTO = true;
 
   const [localLevel, setLocalLevel] = useState(level);
   const [localLen, setLocalLen] = useState(roundLength);
   const [localMode, setLocalMode] = useState<typeof mode>(mode);
-  const [localAuto, setLocalAuto] = useState(true);
+  const [localAuto, setLocalAuto] = useState(autoAdvance);
 
   if (!open) return null;
 
@@ -36,6 +38,7 @@ export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply
               setLocalLevel(DEFAULT_LEVEL);
               setLocalLen(DEFAULT_ROUND_LENGTH);
               setLocalMode(DEFAULT_MODE);
+              setLocalAuto(DEFAULT_AUTO);
             }}
             className="px-3 py-1 text-sm rounded-full border border-gray-300 bg-white text-gray-700"
           >
@@ -109,10 +112,17 @@ export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply
           <button
             type="button"
             onClick={() => onApply({ level: localLevel, roundLength: localLen, mode: localMode, autoAdvance: localAuto })}
-            disabled={localLevel === level && localLen === roundLength && localMode === mode}
+            disabled={
+              localLevel === level &&
+              localLen === roundLength &&
+              localMode === mode &&
+              localAuto === autoAdvance
+            }
             className={
               "px-3 py-2 text-sm rounded-full border-0 text-white " +
-              (localLevel === level && localLen === roundLength && localMode === mode ? "bg-blue-300 cursor-not-allowed" : "bg-blue-600")
+              (localLevel === level && localLen === roundLength && localMode === mode && localAuto === autoAdvance
+                ? "bg-blue-300 cursor-not-allowed"
+                : "bg-blue-600")
             }
           >
             Käytä ja aloita uusi kierros
