@@ -15,6 +15,7 @@ import { Controls } from '@/features/math/components/Controls';
 import { SettingsPanel } from '@/features/math/components/SettingsPanel';
 import { fetchRound } from '@/features/math/api/rounds';
 import { trackAnswer, trackRoundComplete, trackRoundStart } from '@/core/analytics';
+import { CelebrationOverlay } from '@/features/math/components/CelebrationOverlay';
 
 type Props = {
   initialLevel: number;
@@ -64,7 +65,7 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
   const handleToggleSettings = () => dispatch({ type: state.settingsOpen ? 'CLOSE_SETTINGS' : 'OPEN_SETTINGS' });
   const handleCloseSettings = () => dispatch({ type: 'CLOSE_SETTINGS' });
   const handleApplySettings = async ({ level, roundLength, mode }: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => {
-    dispatch({ type: 'APPLY_SETTINGS', level, roundLength });
+    dispatch({ type: 'APPLY_SETTINGS', level, roundLength, autoAdvance: state.autoAdvance });
     if (mode !== state.mode) {
       dispatch({ type: 'SET_MODE', mode });
     }
@@ -85,8 +86,9 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
       localStorage.setItem('pm.level', String(state.level));
       localStorage.setItem('pm.roundLength', String(state.roundLength));
       localStorage.setItem('pm.mode', state.mode);
+      localStorage.setItem('pm.autoAdvance', String(state.autoAdvance));
     } catch {}
-  }, [state.level, state.roundLength, state.mode]);
+  }, [state.level, state.roundLength, state.mode, state.autoAdvance]);
 
   // Hydrate settings from localStorage once on mount
   const hydratedRef = useRef(false);
@@ -98,16 +100,17 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
         const l = localStorage.getItem('pm.level');
         const len = localStorage.getItem('pm.roundLength');
         const lo = localStorage.getItem('pm.lastOutcome');
-        const m = localStorage.getItem('pm.mode');
+      const m = localStorage.getItem('pm.mode');
+      const aa = localStorage.getItem('pm.autoAdvance');
         const level = l ? Number(l) : NaN;
         const roundLength = len ? Number(len) : NaN;
         const validLevel = Number.isFinite(level) && level >= 1 && level <= 99 ? level : state.level;
         const validLen = Number.isFinite(roundLength) && roundLength >= 5 && roundLength <= 30 ? roundLength : state.roundLength;
         const validMode = m === 'add' || m === 'sub' || m === 'mul' || m === 'mixed' ? m : state.mode;
-        if (validLevel !== state.level || validLen !== state.roundLength) {
+      if (validLevel !== state.level || validLen !== state.roundLength) {
           void handleApplySettings({ level: validLevel, roundLength: validLen, mode: state.mode });
         }
-        if (validMode !== state.mode) {
+      if (validMode !== state.mode) {
           dispatch({ type: 'SET_MODE', mode: validMode });
           // start a new round with same level/length, new mode
           dispatch({ type: 'NEW_ROUND_REQUEST' });
@@ -118,7 +121,7 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
             dispatch({ type: 'NEW_ROUND_FAILURE', error: (err as Error).message });
           }
         }
-        if (lo) {
+      if (lo) {
           try {
             const parsed = JSON.parse(lo) as { correct: number; total: number };
             if (
@@ -129,6 +132,10 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
               dispatch({ type: 'SET_LAST_OUTCOME', outcome: parsed });
             }
           } catch {}
+        }
+        if (aa === 'true' || aa === 'false') {
+          // update autoAdvance without starting new round
+          dispatch({ type: 'APPLY_SETTINGS', level: state.level, roundLength: state.roundLength, autoAdvance: aa === 'true' });
         }
       } catch {}
     })();
@@ -166,6 +173,16 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
     return () => window.removeEventListener('keydown', onKey);
   }, [state.phase]);
 
+  // Auto-advance after brief delay on feedback (dopamine feedback)
+  useEffect(() => {
+    if (state.phase !== 'feedback' || !state.autoAdvance) return;
+    const delay = state.lastCorrect ? 800 : 1400; // shorter when correct
+    const t = setTimeout(() => {
+      handleNext();
+    }, delay);
+    return () => clearTimeout(t);
+  }, [state.phase, state.lastCorrect, state.autoAdvance]);
+
   if (state.phase === 'loading') {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gray-200 text-gray-900">
@@ -177,6 +194,7 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
   return (
     <main className="min-h-screen flex justify-center items-start p-6 bg-gray-200 text-gray-900">
       <div className="bg-white rounded-2xl p-6 w-full max-w-[500px] shadow-lg">
+        <CelebrationOverlay show={state.phase === 'feedback' && isCorrect} kind={isCorrect ? 'success' : 'error'} />
         <div className="flex justify-end mb-2 gap-2">
           <Link
             href="/stats"
@@ -218,29 +236,56 @@ export default function GameClient({ initialLevel, initialRound, initialMode = '
           </>
         ) : (
           <>
-            <TaskPanel phase={state.phase} isCorrect={isCorrect}>
-              <TaskRenderer
-                task={currentTask}
-                value={state.answer}
-                onChange={(v) => dispatch({ type: 'SET_ANSWER', value: v })}
-                onEnter={state.phase === 'question' ? handleSubmit : handleNext}
-                phase={state.phase === 'question' ? 'question' : 'feedback'}
-              />
-            </TaskPanel>
-
-            <FeedbackText
-              phase={state.phase}
-              isCorrect={isCorrect}
-              correctAnswer={currentTask.correctAnswer}
-            />
-
-            <Controls
-              phase={state.phase}
-              canSubmit={state.answer.trim() !== ''}
-              onSubmit={handleSubmit}
-              onNext={handleNext}
-              onRestart={handleNewRound}
-            />
+            {state.phase === 'question' ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSubmit();
+                }}
+              >
+                <TaskPanel phase={state.phase} isCorrect={isCorrect}>
+                  <TaskRenderer
+                    task={currentTask}
+                    value={state.answer}
+                    onChange={(v) => dispatch({ type: 'SET_ANSWER', value: v })}
+                    onEnter={undefined}
+                    phase="question"
+                  />
+                </TaskPanel>
+                <Controls
+                  phase={state.phase}
+                  canSubmit={state.answer.trim() !== ''}
+                  onSubmit={handleSubmit}
+                  onNext={handleNext}
+                  onRestart={handleNewRound}
+                  submitType="submit"
+                />
+              </form>
+            ) : (
+              <>
+                <TaskPanel phase={state.phase} isCorrect={isCorrect}>
+                  <TaskRenderer
+                    task={currentTask}
+                    value={state.answer}
+                    onChange={(v) => dispatch({ type: 'SET_ANSWER', value: v })}
+                    onEnter={handleNext}
+                    phase="feedback"
+                  />
+                </TaskPanel>
+                <FeedbackText
+                  phase={state.phase}
+                  isCorrect={isCorrect}
+                  correctAnswer={currentTask.correctAnswer}
+                />
+                <Controls
+                  phase={state.phase}
+                  canSubmit={state.answer.trim() !== ''}
+                  onSubmit={handleSubmit}
+                  onNext={handleNext}
+                  onRestart={handleNewRound}
+                />
+              </>
+            )}
 
             <p className="mt-3 text-sm text-gray-500">
               Oikein tähän mennessä: {state.correctCount} / {questionNumber - 1}

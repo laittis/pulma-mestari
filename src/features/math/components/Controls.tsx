@@ -9,14 +9,15 @@ type Props = {
   onSubmit: () => void;
   onNext: () => void;
   onRestart: () => void;
+  submitType?: 'button' | 'submit';
 };
 
-export function Controls({ phase, canSubmit, onSubmit, onNext, onRestart }: Props) {
+export function Controls({ phase, canSubmit, onSubmit, onNext, onRestart, submitType = 'button' }: Props) {
   return (
     <div className="flex gap-2">
       {phase === "question" ? (
         <button
-          type="button"
+          type={submitType}
           onClick={onSubmit}
           disabled={!canSubmit}
           className={
@@ -46,4 +47,3 @@ export function Controls({ phase, canSubmit, onSubmit, onNext, onRestart }: Prop
     </div>
   );
 }
-

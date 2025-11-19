@@ -21,6 +21,7 @@ export type GameState = {
   settingsOpen?: boolean;
   roundLength: number;
   mode: GameMode;
+  autoAdvance: boolean;
 };
 
 export type GameAction =
@@ -32,7 +33,7 @@ export type GameAction =
   | { type: "NEW_ROUND_FAILURE"; error: string }
   | { type: "OPEN_SETTINGS" }
   | { type: "CLOSE_SETTINGS" }
-  | { type: "APPLY_SETTINGS"; level: number; roundLength: number }
+  | { type: "APPLY_SETTINGS"; level: number; roundLength: number; autoAdvance?: boolean }
   | { type: "SET_LAST_OUTCOME"; outcome: RoundOutcome }
   | { type: "SET_MODE"; mode: GameMode };
 
@@ -50,6 +51,7 @@ export function initGameState(level: number, round: GeneratedRound, mode: GameMo
     settingsOpen: false,
     roundLength: 10,
     mode,
+    autoAdvance: true,
   };
 }
 
@@ -143,6 +145,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         level: action.level,
         roundLength: action.roundLength,
+        autoAdvance: action.autoAdvance ?? state.autoAdvance,
       };
     }
 

@@ -10,7 +10,7 @@ type Props = {
   roundLength: number;
   mode: 'mixed' | 'add' | 'sub' | 'mul';
   onClose: () => void;
-  onApply: (opts: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul' }) => void;
+  onApply: (opts: { level: number; roundLength: number; mode: 'mixed' | 'add' | 'sub' | 'mul'; autoAdvance: boolean }) => void;
 };
 
 export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply }: Props) {
@@ -21,6 +21,7 @@ export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply
   const [localLevel, setLocalLevel] = useState(level);
   const [localLen, setLocalLen] = useState(roundLength);
   const [localMode, setLocalMode] = useState<typeof mode>(mode);
+  const [localAuto, setLocalAuto] = useState(true);
 
   if (!open) return null;
 
@@ -55,6 +56,15 @@ export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply
       </p>
 
       <div className="grid grid-cols-1 gap-3">
+        <label className="flex items-center justify-between gap-4">
+          <span className="text-sm text-gray-700">Automaattinen eteneminen</span>
+          <input
+            type="checkbox"
+            checked={localAuto}
+            onChange={(e) => setLocalAuto(e.target.checked)}
+          />
+        </label>
+
         <label className="flex items-center justify-between gap-4">
           <span className="text-sm text-gray-700">Pelitila</span>
           <select
@@ -98,7 +108,7 @@ export function SettingsPanel({ open, level, roundLength, mode, onClose, onApply
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={() => onApply({ level: localLevel, roundLength: localLen, mode: localMode })}
+            onClick={() => onApply({ level: localLevel, roundLength: localLen, mode: localMode, autoAdvance: localAuto })}
             disabled={localLevel === level && localLen === roundLength && localMode === mode}
             className={
               "px-3 py-2 text-sm rounded-full border-0 text-white " +
